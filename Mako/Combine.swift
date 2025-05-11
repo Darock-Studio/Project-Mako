@@ -10,3 +10,5 @@ import Foundation
 
 let performSearchSubject = PassthroughSubject<String, Never>()
 let updateSystemVolumeSubject = PassthroughSubject<Float, Never>()
+let gotoAlbumSubject = PassthroughSubject<Int64, Never>()
+let gotoArtistSubject = PassthroughSubject<Int, Never>()

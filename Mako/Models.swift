@@ -16,10 +16,16 @@ struct SuggestionItem: Identifiable {
     var id: Int
     var name: String
     var picUrl: String
+    
+//    private struct PreviewView: View {
+//        var body: some View {
+//            /*@START_MENU_TOKEN@*//*@PLACEHOLDER=Hello, world!@*/Text("Hello, world!")/*@END_MENU_TOKEN@*/
+//        }
+//    }
 }
 enum SuggestionItemType {
+    case playlist
     case album
-    case song
 }
 
 struct Album: Identifiable, Decodable {
@@ -94,18 +100,109 @@ struct Track: Identifiable, Codable {
         try container.encode(album, forKey: .al)
     }
     
+    var previewView: some View {
+        VStack(alignment: .leading) {
+            WebImage(url: URL(string: self.album.picUrl)) { image in
+                image.resizable()
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.gray)
+                    .redacted(reason: .placeholder)
+            }
+            .scaledToFill()
+            .frame(width: screenBounds.width - 100, height: screenBounds.width - 100)
+            .clipped()
+            .cornerRadius(8)
+            .padding(.horizontal)
+            .padding(.vertical, 5)
+            Group {
+                Text(self.name)
+                    .font(.system(size: 16, weight: .semibold))
+                Text(self.artists.map { $0.name }.joined(separator: "/"))
+                    .foregroundStyle(.gray)
+            }
+            .padding(.horizontal)
+        }
+        .frame(width: screenBounds.width - 70, height: screenBounds.width)
+    }
     @ViewBuilder
     var contextActions: some View {
-        Section {
-            if UserDefaults.standard.bool(forKey: "IsLoggedIn") {
-                
+        ContextActionsView(track: self)
+    }
+    private struct ContextActionsView: View {
+        var track: Track
+        @State var isFavorited: Bool?
+        var body: some View {
+            Section {
+                if UserDefaults.standard.bool(forKey: "IsLoggedIn") {
+                    if let isFavorited {
+                        if isFavorited {
+                            Button("取消喜欢", systemImage: "star.slash", role: .destructive) {
+                                requestJSON("\(apiBaseURL)/like?id=\(track.id)&like=false", headers: globalRequestHeaders) { _, isSuccess in
+                                    if !isSuccess {
+                                        NKTipper.automaticStyle.present(text: "移除时出错", symbol: "xmark.circle.fill")
+                                    }
+                                }
+                            }
+                        } else {
+                            Button("喜欢", systemImage: "star") {
+                                requestJSON("\(apiBaseURL)/like?id=\(track.id)&like=true", headers: globalRequestHeaders) { _, isSuccess in
+                                    if isSuccess {
+                                        NKTipper.automaticStyle.present(text: "已添加到收藏", symbol: "checkmark.circle.fill")
+                                    } else {
+                                        NKTipper.automaticStyle.present(text: "收藏时出错", symbol: "xmark.circle.fill")
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        ProgressView()
+                            .task {
+                                let result = await requestJSON("\(apiBaseURL)/likelist", headers: globalRequestHeaders)
+                                if case let .success(respJson) = result, let ids = respJson["ids"].arrayObject as? [Int64] {
+                                    isFavorited = ids.contains(track.id)
+                                } else {
+                                    isFavorited = false
+                                }
+                            }
+                    }
+                }
             }
-        }
-        Section {
-            Link(destination: URL(string: "https://music.163.com/#/song?id=\(self.id)")!) {
-                Label("在浏览器中打开", systemImage: "safari")
+            Section {
+                if track.artists.count == 1 {
+                    Button("转到艺人", systemImage: "music.microphone") {
+                        gotoArtistSubject.send(track.artists.first!.id)
+                    }
+                } else {
+                    #if !os(watchOS)
+                    Menu("转到艺人", systemImage: "music.microphone") {
+                        ForEach(track.artists) { artist in
+                            Button(artist.name, systemImage: "person") {
+                                gotoArtistSubject.send(artist.id)
+                            }
+                        }
+                    }
+                    #else
+                    ForEach(track.artists) { artist in
+                        Button(artist.name, systemImage: "person") {
+                            gotoArtistSubject.send(artist.id)
+                        }
+                    }
+                    #endif
+                }
+                Button(action: {
+                    gotoAlbumSubject.send(Int64(track.album.id))
+                }, label: {
+                    Image(_internalSystemName: "music.square")
+                    Text("转到专辑")
+                })
             }
-            ShareLink("分享歌曲...", item: URL(string: "https://music.163.com/#/song?id=\(self.id)")!)
+            Section {
+                Link(destination: URL(string: "https://music.163.com/#/song?id=\(track.id)")!) {
+                    Label("在浏览器中打开", systemImage: "safari")
+                }
+                ShareLink("分享歌曲...", item: URL(string: "https://music.163.com/#/song?id=\(track.id)")!)
+            }
         }
     }
     
@@ -120,6 +217,13 @@ struct Artist: Identifiable, Codable {
     var id: Int
     var name: String
     var picUrl: String?
+}
+struct ArtistDetailed: Identifiable, Decodable {
+    var id: Int
+    var name: String
+    var cover: String
+    var avatar: String
+    var briefDesc: String
 }
 
 struct SearchResults {

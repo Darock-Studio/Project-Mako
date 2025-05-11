@@ -44,7 +44,7 @@ struct HomeView: View {
                 if isSuccess {
                     personalAlbumSuggestions.removeAll()
                     for album in respJson["data"]["dailySongs"] {
-                        personalAlbumSuggestions.append(.init(type: .album, id: album.1["al"]["id"].intValue, name: album.1["al"]["name"].stringValue, picUrl: album.1["al"]["picUrl"].stringValue))
+                        personalAlbumSuggestions.append(.init(type: .playlist, id: album.1["al"]["id"].intValue, name: album.1["al"]["name"].stringValue, picUrl: album.1["al"]["picUrl"].stringValue))
                     }
                 }
             }
@@ -53,7 +53,7 @@ struct HomeView: View {
             if isSuccess {
                 albumSuggestions.removeAll()
                 for album in respJson["result"] {
-                    albumSuggestions.append(.init(type: .album, id: album.1["id"].intValue, name: album.1["name"].stringValue, picUrl: album.1["picUrl"].stringValue))
+                    albumSuggestions.append(.init(type: .playlist, id: album.1["id"].intValue, name: album.1["name"].stringValue, picUrl: album.1["picUrl"].stringValue))
                 }
             }
         }

@@ -68,7 +68,7 @@ struct AccountView: View {
                     Button(action: {
                         isLoggingIn = true
                         requestJSON("\(apiBaseURL)/login/cellphone?phone=\(usernameInput)&md5_password=\(passwordInput.md5)&timestamp=\(Int(Date.now.timeIntervalSince1970))0000") { respJson, isSuccess in
-                            if isSuccess, let cookie = respJson["token"].string {
+                            if isSuccess, let cookie = respJson["cookie"].string {
                                 UserDefaults.standard.set(
                                     cookie
                                         .components(separatedBy: ";")

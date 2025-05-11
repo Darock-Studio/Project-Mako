@@ -13,13 +13,15 @@ import SDWebImageSwiftUI
 @_spi(Advanced) import SwiftUIIntrospect
 
 struct AlbumDetailView: View {
-    var id: Int
+    var id: Int64
+    var type: AlbumType = .playlist
     @State var album: Album?
     @State var tracks: [Track]?
     @State var workTitleHeight: CGFloat = 0
     @State var scrollObservation: NSKeyValueObservation?
     @State var isShowingNavigationTitle = false
     @State var relatedAlbums = [SuggestionItem]()
+    @State var relatedArtistName = ""
     var body: some View {
         Group {
             if let album {
@@ -70,6 +72,9 @@ struct AlbumDetailView: View {
                         #endif
                     }
                     .centerAligned()
+                    #if !os(watchOS)
+                    .listRowSeparator(.hidden, edges: .top)
+                    #endif
                     if let tracks {
                         ForEach(tracks) { track in
                             Button(action: {
@@ -78,24 +83,30 @@ struct AlbumDetailView: View {
                                 }
                             }, label: {
                                 HStack {
-                                    WebImage(url: URL(string: "\(track.album.picUrl)?param=120y120")) { image in
-                                        image.resizable()
-                                    } placeholder: {
-                                        Rectangle()
-                                            .fill(Color.gray)
-                                            .redacted(reason: .placeholder)
-                                    }
-                                    .scaledToFill()
-                                    .frame(width: 40, height: 40)
-                                    .clipped()
-                                    .cornerRadius(3)
-                                    VStack(alignment: .leading, spacing: 2) {
+                                    if type == .playlist {
+                                        WebImage(url: URL(string: "\(track.album.picUrl)?param=120y120")) { image in
+                                            image.resizable()
+                                        } placeholder: {
+                                            Rectangle()
+                                                .fill(Color.gray)
+                                                .redacted(reason: .placeholder)
+                                        }
+                                        .scaledToFill()
+                                        .frame(width: 40, height: 40)
+                                        .clipped()
+                                        .cornerRadius(3)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(track.name)
+                                                .font(.system(size: 14))
+                                            Text(track.artists.map(\.name).joined(separator: " / "))
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(.gray)
+                                        }
+                                    } else {
                                         Text(track.name)
                                             .font(.system(size: 14))
-                                        Text(track.artists.map(\.name).joined(separator: " / "))
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.gray)
                                     }
+                                    Spacer()
 //                                    if !isDownloaded,
 //                                       let _progress = downloadProgress,
 //                                       _progress < 1,
@@ -115,8 +126,16 @@ struct AlbumDetailView: View {
 //                                                .foregroundStyle(.gray)
 //                                        }
 //                                    }
+                                    #if !os(watchOS)
+                                    Menu("", systemImage: "ellipsis") {
+                                        track.contextActions
+                                    }
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(Color.primary)
+                                    #endif
                                 }
                             })
+                            .listRowInsets(.init(top: 5, leading: 20, bottom: 5, trailing: 0))
                         }
                     } else {
                         ProgressView()
@@ -139,7 +158,7 @@ struct AlbumDetailView: View {
                     .padding(.vertical)
                     if !relatedAlbums.isEmpty {
                         VStack(alignment: .leading) {
-                            Text("你可能也喜欢")
+                            Text(type == .playlist ? "你可能也喜欢" : "更多\(relatedArtistName)的作品")
                                 .font(.system(size: 22, weight: .bold))
                                 .padding(.horizontal)
                             ItemListView(items: relatedAlbums)
@@ -151,6 +170,11 @@ struct AlbumDetailView: View {
                         .listRowSeparator(.hidden)
                         #endif
                     }
+                    #if os(iOS)
+                    Spacer()
+                        .frame(height: 70)
+                        .listRowSeparator(.hidden)
+                    #endif
                 }
                 #if os(iOS)
                 .listStyle(.plain)
@@ -160,7 +184,6 @@ struct AlbumDetailView: View {
                         isShowingNavigationTitle = scrollOffset.y - workTitleHeight > 170
                     }
                 }
-                .padding(.bottom, 60)
                 #endif
             } else {
                 ProgressView()
@@ -192,23 +215,49 @@ struct AlbumDetailView: View {
     }
     
     func refresh() {
-        requestJSON("\(apiBaseURL)/playlist/detail?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
-            if isSuccess {
-                album = getJsonData(Album.self, from: respJson["playlist"].rawString()!)
-            }
-        }
-        requestJSON("\(apiBaseURL)/playlist/track/all?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
-            if isSuccess {
-                tracks = getJsonData([Track].self, from: respJson["songs"].rawString()!)
-            }
-        }
-        requestJSON("\(apiBaseURL)/related/playlist?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
-            if isSuccess {
-                relatedAlbums.removeAll()
-                for album in respJson["playlists"] {
-                    relatedAlbums.append(.init(type: .album, id: Int(album.1["id"].stringValue)!, name: album.1["name"].stringValue, picUrl: album.1["coverImgUrl"].stringValue))
+        if type == .playlist {
+            requestJSON("\(apiBaseURL)/playlist/detail?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
+                if isSuccess {
+                    album = getJsonData(Album.self, from: respJson["playlist"].rawString()!)
                 }
             }
+            requestJSON("\(apiBaseURL)/playlist/track/all?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
+                if isSuccess {
+                    tracks = getJsonData([Track].self, from: respJson["songs"].rawString()!)
+                }
+            }
+            requestJSON("\(apiBaseURL)/related/playlist?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
+                if isSuccess {
+                    relatedAlbums.removeAll()
+                    for album in respJson["playlists"] {
+                        relatedAlbums.append(.init(type: .playlist, id: Int(album.1["id"].stringValue)!, name: album.1["name"].stringValue, picUrl: album.1["coverImgUrl"].stringValue))
+                    }
+                }
+            }
+        } else {
+            requestJSON("\(apiBaseURL)/album?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
+                if isSuccess {
+                    album = getJsonData(Album.self, from: respJson["album"].rawString()!)
+                    tracks = getJsonData([Track].self, from: respJson["songs"].rawString()!)
+                    if let artistID = respJson["album"]["artists"][0]["id"].int {
+                        relatedArtistName = respJson["album"]["artists"][0]["name"].stringValue
+                        requestJSON("\(apiBaseURL)/artist/album?id=\(artistID)", headers: globalRequestHeaders) { respJson, isSuccess in
+                            if isSuccess {
+                                relatedAlbums.removeAll()
+                                for album in respJson["hotAlbums"] {
+                                    relatedAlbums.append(.init(type: .album, id: Int(album.1["id"].stringValue)!, name: album.1["name"].stringValue, picUrl: album.1["picUrl"].stringValue))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
         }
+    }
+    
+    enum AlbumType {
+        case playlist
+        case album
     }
 }

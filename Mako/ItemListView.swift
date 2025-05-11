@@ -28,7 +28,7 @@ struct ItemListView: View {
                     if !items.isEmpty {
                         ForEach(items) { item in
                             NavigationLink {
-                                AlbumDetailView(id: item.id)
+                                AlbumDetailView(id: Int64(item.id), type: item.type == .playlist ? .playlist : .album)
                                     .navigationTransition(.zoom(sourceID: item.id, in: navigationNamespace))
                             } label: {
                                 VStack(alignment: .leading) {
@@ -61,11 +61,13 @@ struct ItemListView: View {
                                 #endif
                             }
                             .buttonStyle(.borderless)
+//                            #if !os(watchOS)
 //                            .contextMenu {
 //                                item.contextActions
 //                            } preview: {
 //                                item.previewView
 //                            }
+//                            #endif
                             .onAppear {
                                 if item.id == items.last?.id {
                                     onLastItemAppear?()
@@ -103,7 +105,7 @@ struct ItemListView: View {
                 if !items.isEmpty {
                     ForEach(items) { item in
                         NavigationLink {
-                            AlbumDetailView(id: item.id)
+                            AlbumDetailView(id: Int64(item.id), type: item.type == .playlist ? .playlist : .album)
                                 .navigationTransition(.zoom(sourceID: item.id, in: navigationNamespace))
                         } label: {
                             VStack(alignment: .leading) {
@@ -127,11 +129,13 @@ struct ItemListView: View {
                             }
                         }
                         .buttonStyle(.borderless)
+//                        #if !os(watchOS)
 //                        .contextMenu {
-//                            work.contextActions
+//                            item.contextActions
 //                        } preview: {
-//                            work.previewView
+//                            item.previewView
 //                        }
+//                        #endif
                         .onAppear {
                             if item.id == items.last?.id {
                                 onLastItemAppear?()
@@ -165,7 +169,7 @@ struct ItemListView: View {
             .padding(.horizontal, -10)
         case .plain:
             ForEach(items) { item in
-                NavigationLink { AlbumDetailView(id: item.id) } label: {
+                NavigationLink { AlbumDetailView(id: Int64(item.id), type: item.type == .playlist ? .playlist : .album) } label: {
                     HStack {
                         WebImage(url: URL(string: item.picUrl)) { image in
                             image.resizable()
@@ -184,11 +188,13 @@ struct ItemListView: View {
                             .foregroundStyle(Color.primary)
                     }
                 }
+//                #if !os(watchOS)
 //                .contextMenu {
-//                    work.contextActions
+//                    item.contextActions
 //                } preview: {
-//                    work.previewView
+//                    item.previewView
 //                }
+//                #endif
                 .onAppear {
                     if item.id == items.last?.id {
                         onLastItemAppear?()
@@ -205,7 +211,7 @@ struct ItemListView: View {
     }
 }
 extension ItemListView {
-    func workListStyle(_ style: ItemListViewStyle) -> Self {
+    func itemListStyle(_ style: ItemListViewStyle) -> Self {
         var mutableCopy = self
         mutableCopy.style = style
         return mutableCopy

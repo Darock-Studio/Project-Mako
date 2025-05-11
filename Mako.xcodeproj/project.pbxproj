@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8C0CF0D72DD089AA009762AF /* ArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF0D62DD089A5009762AF /* ArtistDetailView.swift */; };
+		8C0CF0D82DD089AA009762AF /* ArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF0D62DD089A5009762AF /* ArtistDetailView.swift */; };
+		8C0CF0DA2DD08AFA009762AF /* View+SubjectNavigatable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF0D92DD08AE6009762AF /* View+SubjectNavigatable.swift */; };
+		8C0CF0DB2DD08AFA009762AF /* View+SubjectNavigatable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF0D92DD08AE6009762AF /* View+SubjectNavigatable.swift */; };
+		8C0CF0DD2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF0DC2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift */; };
+		8C0CF0DE2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF0DC2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift */; };
 		8CCE66BD2DCFA27800BE8475 /* View+ReversedMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCE66BC2DCFA26F00BE8475 /* View+ReversedMask.swift */; };
 		8CCE66BF2DCFCD0200BE8475 /* StarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCE66BE2DCFCD0200BE8475 /* StarButton.swift */; };
 		8CCE66C02DCFCEDD00BE8475 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68BB2DC8AA4900EFACDB /* Models.swift */; };
@@ -86,6 +92,9 @@
 
 /* Begin PBXFileReference section */
 		8C0CF0D52DD06F3F009762AF /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		8C0CF0D62DD089A5009762AF /* ArtistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtistDetailView.swift; sourceTree = "<group>"; };
+		8C0CF0D92DD08AE6009762AF /* View+SubjectNavigatable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+SubjectNavigatable.swift"; sourceTree = "<group>"; };
+		8C0CF0DC2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UINavigationController+UIGestureRecognizerDelegate.swift"; sourceTree = "<group>"; };
 		8CCE66BC2DCFA26F00BE8475 /* View+ReversedMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+ReversedMask.swift"; sourceTree = "<group>"; };
 		8CCE66BE2DCFCD0200BE8475 /* StarButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarButton.swift; sourceTree = "<group>"; };
 		8CCE66D62DD05BA800BE8475 /* NowPlayingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingButton.swift; sourceTree = "<group>"; };
@@ -175,6 +184,7 @@
 				8CEC68932DC8A4C700EFACDB /* ContentView.swift */,
 				8CEC68B82DC8A89000EFACDB /* HomeView.swift */,
 				8CEC68CB2DC8AC7000EFACDB /* AlbumDetailView.swift */,
+				8C0CF0D62DD089A5009762AF /* ArtistDetailView.swift */,
 				8CEC68D12DCF628D00EFACDB /* SearchView.swift */,
 				8CEC68D92DCF75A600EFACDB /* NowPlayingView.swift */,
 				8CEC68E12DCF8C8200EFACDB /* AccountView.swift */,
@@ -199,7 +209,9 @@
 				8CCE66BE2DCFCD0200BE8475 /* StarButton.swift */,
 				8CEC68DD2DCF774600EFACDB /* MarqueeText.swift */,
 				8CCE66BC2DCFA26F00BE8475 /* View+ReversedMask.swift */,
+				8C0CF0D92DD08AE6009762AF /* View+SubjectNavigatable.swift */,
 				8CEC68DB2DCF763000EFACDB /* AVPlayer+PeriodicTimePublisher.swift */,
+				8C0CF0DC2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -335,14 +347,17 @@
 				8CCE66BF2DCFCD0200BE8475 /* StarButton.swift in Sources */,
 				8CEC68972DC8A4C700EFACDB /* MakoApp.swift in Sources */,
 				8CEC68E22DCF8C8200EFACDB /* AccountView.swift in Sources */,
+				8C0CF0D82DD089AA009762AF /* ArtistDetailView.swift in Sources */,
 				8CEC68E02DCF7B5000EFACDB /* ColorThief.swift in Sources */,
 				8CEC68D42DCF66F200EFACDB /* Combine.swift in Sources */,
+				8C0CF0DD2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift in Sources */,
 				8CEC68DE2DCF774600EFACDB /* MarqueeText.swift in Sources */,
 				8CEC68BF2DC8AADB00EFACDB /* ItemListView.swift in Sources */,
 				8CEC68DC2DCF763000EFACDB /* AVPlayer+PeriodicTimePublisher.swift in Sources */,
 				8CEC68DA2DCF75A600EFACDB /* NowPlayingView.swift in Sources */,
 				8CEC68B72DC8A86D00EFACDB /* UIRepresentable.swift in Sources */,
 				8CEC68BC2DC8AA4B00EFACDB /* Models.swift in Sources */,
+				8C0CF0DA2DD08AFA009762AF /* View+SubjectNavigatable.swift in Sources */,
 				8CCE66D72DD05BAB00BE8475 /* NowPlayingButton.swift in Sources */,
 				8CEC68B92DC8A89200EFACDB /* HomeView.swift in Sources */,
 				8CEC68A82DC8A61700EFACDB /* GlobalProperties.swift in Sources */,
@@ -359,6 +374,7 @@
 				8CCE66C12DCFCEDD00BE8475 /* Combine.swift in Sources */,
 				8CCE66C22DCFCEDD00BE8475 /* GlobalProperties.swift in Sources */,
 				8CCE66C32DCFCEDD00BE8475 /* ColorThief.swift in Sources */,
+				8C0CF0DB2DD08AFA009762AF /* View+SubjectNavigatable.swift in Sources */,
 				8CCE66C52DCFCEDD00BE8475 /* StarButton.swift in Sources */,
 				8CCE66C62DCFCEDD00BE8475 /* MarqueeText.swift in Sources */,
 				8CCE66C72DCFCEDD00BE8475 /* View+ReversedMask.swift in Sources */,
@@ -368,7 +384,9 @@
 				8CCE66CA2DCFCEDD00BE8475 /* ItemListView.swift in Sources */,
 				8CCE66CB2DCFCEDD00BE8475 /* ContentView.swift in Sources */,
 				8CCE66CC2DCFCEDD00BE8475 /* HomeView.swift in Sources */,
+				8C0CF0D72DD089AA009762AF /* ArtistDetailView.swift in Sources */,
 				8CCE66CD2DCFCEDD00BE8475 /* AlbumDetailView.swift in Sources */,
+				8C0CF0DE2DD091AE009762AF /* UINavigationController+UIGestureRecognizerDelegate.swift in Sources */,
 				8CCE66CE2DCFCEDD00BE8475 /* SearchView.swift in Sources */,
 				8CCE66CF2DCFCEDD00BE8475 /* NowPlayingView.swift in Sources */,
 				8CCE66D02DCFCEDD00BE8475 /* AccountView.swift in Sources */,

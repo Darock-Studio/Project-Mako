@@ -48,6 +48,7 @@ struct ContentView: View {
                 Group {
                     NavigationStack {
                         HomeView()
+                            .subjectNavigatable()
                         #if !os(watchOS)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
@@ -107,6 +108,7 @@ struct ContentView: View {
 //                    }
                     NavigationStack {
                         SearchView(isSearchKeyboardFocused: $isSearchKeyboardFocused)
+                            .subjectNavigatable()
                         #if !os(watchOS)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
@@ -152,7 +154,18 @@ struct ContentView: View {
                     tabSelection = 3
                     performSearchSubject.send(text)
                 }
+                #if os(iOS)
+                nowPlayingSheetPosition = .hidden
+                #endif
             }
+            #if os(iOS)
+            .onReceive(gotoArtistSubject) { _ in
+                nowPlayingSheetPosition = .hidden
+            }
+            .onReceive(gotoAlbumSubject) { _ in
+                nowPlayingSheetPosition = .hidden
+            }
+            #endif
         }
         #if os(iOS)
         .bottomSheet(bottomSheetPosition: $nowPlayingSheetPosition, switchablePositions: [.hidden, .relativeTop(1)]) {
@@ -196,18 +209,18 @@ struct ContentView: View {
                                 isNowPlayingStarred.toggle()
                             }
                         }
-//                        Menu {
-//                            nowPlayingWork.contextActions
-//                        } label: {
-//                            Image(systemName: "ellipsis")
-//                                .font(.system(size: 14, weight: .bold))
-//                                .foregroundStyle(.white)
-//                                .padding(6)
-//                        }
-//                        .menuStyle(.button)
-//                        .buttonStyle(.bordered)
-//                        .buttonBorderShape(.circle)
-//                        .padding(.horizontal, -10)
+                        Menu {
+                            nowPlayingTrack.contextActions
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                        }
+                        .menuStyle(.button)
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.circle)
+                        .padding(.horizontal, -10)
                     }
                 }
             }
@@ -360,6 +373,14 @@ struct ContentView: View {
         )
         .onTapGesture {
             nowPlayingSheetPosition = .relativeTop(1)
+        }
+        .wrapIf(nowPlayingTrack != nil) { content in
+            content
+                .contextMenu {
+                    nowPlayingTrack!.contextActions
+                } preview: {
+                    nowPlayingTrack!.previewView
+                }
         }
         .padding(.horizontal, 10)
         .padding(.bottom, 90)
