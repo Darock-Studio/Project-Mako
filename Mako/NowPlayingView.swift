@@ -292,6 +292,7 @@ struct NowPlayingView: View {
                             #endif
                             #if !os(watchOS)
                             HStack {
+                                Spacer()
                                 Button(action: {
                                     globalAudioPlayer.seek(
                                         to: CMTime(seconds: globalAudioPlayer.currentTime().seconds - 10, preferredTimescale: 60000),
