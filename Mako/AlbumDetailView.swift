@@ -193,6 +193,7 @@ struct AlbumDetailView: View {
         .navigationTitle(isShowingNavigationTitle ? (album?.name ?? "") : "")
         .navigationBarTitleDisplayMode(.inline)
         .withNowPlayingButton()
+        .subjectNavigatable()
 //        .toolbar {
 //            if let work {
 //                ToolbarItemGroup(placement: .topBarTrailing) {

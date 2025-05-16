@@ -243,6 +243,7 @@ struct ArtistDetailView: View {
                     }
             }
         }
+        .subjectNavigatable()
         .toolbarBackgroundVisibility(isShowingNavigationTitle ? .visible : .hidden, for: .navigationBar)
         .transition(.opacity)
         .animation(.smooth, value: isShowingNavigationTitle)

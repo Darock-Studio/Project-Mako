@@ -156,7 +156,7 @@ struct Track: Identifiable, Codable {
                             }
                         }
                     } else {
-                        ProgressView()
+                        Text("正在载入...")
                             .task {
                                 let result = await requestJSON("\(apiBaseURL)/likelist", headers: globalRequestHeaders)
                                 if case let .success(respJson) = result, let ids = respJson["ids"].arrayObject as? [Int64] {
@@ -166,6 +166,11 @@ struct Track: Identifiable, Codable {
                                 }
                             }
                     }
+                }
+            }
+            Section {
+                Button("查看评论", systemImage: "text.bubble") {
+                    presentCommentsSubject.send(track.id)
                 }
             }
             Section {
@@ -265,7 +270,7 @@ struct SearchResults {
                     }
                 }, label: {
                     HStack {
-                        WebImage(url: URL(string: track.album.picUrl)) { image in
+                        WebImage(url: URL(string: "\(track.album.picUrl)?param=240y240")) { image in
                             image.resizable()
                         } placeholder: {
                             Rectangle()
@@ -273,9 +278,9 @@ struct SearchResults {
                                 .redacted(reason: .placeholder)
                         }
                         .scaledToFill()
-                        .frame(width: 40, height: 40)
+                        .frame(width: 60, height: 60)
                         .clipped()
-                        .cornerRadius(3)
+                        .cornerRadius(5)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(track.name)
                                 .font(.system(size: 14))
@@ -283,8 +288,16 @@ struct SearchResults {
                                 .font(.system(size: 12))
                                 .foregroundStyle(.gray)
                         }
+                        Spacer()
+                        #if !os(watchOS)
+                        Menu("", systemImage: "ellipsis") {
+                            track.contextActions
+                        }
+                        .foregroundStyle(Color.primary)
+                        #endif
                     }
                 })
+                .listRowInsets(.init(top: 10, leading: 20, bottom: 10, trailing: 0))
             }
         case .album:
             ForEach(anyResults as! [Album]) { album in
@@ -380,4 +393,40 @@ enum PlaybackBehavior: String {
     case pause
     case singleLoop
     case listLoop
+}
+
+struct Comment: Identifiable, Decodable {
+    var commentId: Int64
+    var content: String
+    var time: Date
+    var likedCount: Int
+    var liked: Bool
+    var user: User
+    
+    enum CodingKeys: CodingKey {
+        case commentId
+        case content
+        case time
+        case likedCount
+        case liked
+        case user
+    }
+    
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.commentId = try container.decode(Int64.self, forKey: .commentId)
+        self.content = try container.decode(String.self, forKey: .content)
+        self.time = Date(timeIntervalSince1970: Double(try container.decode(Int.self, forKey: .time)) / 1000)
+        self.likedCount = try container.decode(Int.self, forKey: .likedCount)
+        self.liked = try container.decode(Bool.self, forKey: .liked)
+        self.user = try container.decode(Comment.User.self, forKey: .user)
+    }
+    
+    var id: Int64 { commentId }
+    
+    struct User: Decodable {
+        var userId: Int
+        var nickname: String
+        var avatarUrl: String
+    }
 }

@@ -32,7 +32,7 @@ struct ItemListView: View {
                                     .navigationTransition(.zoom(sourceID: item.id, in: navigationNamespace))
                             } label: {
                                 VStack(alignment: .leading) {
-                                    WebImage(url: URL(string: item.picUrl)) { image in
+                                    WebImage(url: URL(string: "\(item.picUrl)?param=450y450")) { image in
                                         image.resizable()
                                     } placeholder: {
                                         Rectangle()
@@ -171,7 +171,7 @@ struct ItemListView: View {
             ForEach(items) { item in
                 NavigationLink { AlbumDetailView(id: Int64(item.id), type: item.type == .playlist ? .playlist : .album) } label: {
                     HStack {
-                        WebImage(url: URL(string: item.picUrl)) { image in
+                        WebImage(url: URL(string: "\(item.picUrl)?param=180y180")) { image in
                             image.resizable()
                         } placeholder: {
                             Rectangle()

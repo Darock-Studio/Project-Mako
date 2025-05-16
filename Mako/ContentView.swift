@@ -26,6 +26,7 @@ struct ContentView: View {
     @State var isAccountManagementPresented = false
     @State var isNowPlayingStarred = false
     @State var isNowPlaying = false
+    @State var presentingCommentsID: Int64?
     #if os(iOS)
     @State var nowPlayingSheetPosition = BottomSheetPosition.hidden
     @State var _volumeView = MPVolumeView()
@@ -259,6 +260,11 @@ struct ContentView: View {
         .ignoresSafeArea(edges: .top)
         #endif
         .sheet(isPresented: $isAccountManagementPresented, content: { AccountView() })
+        .sheet(item: $presentingCommentsID) { id in
+            NavigationStack {
+                CommentsView(id: id)
+            }
+        }
         .onReceive(nowPlayingMedia) { media in
             if let media {
                 globalAudioPlayer.replaceCurrentItem(with: AVPlayerItem(url: URL(string: media.playURL)!))
@@ -325,6 +331,9 @@ struct ContentView: View {
                 nowPlayingInfo[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
             }
+        }
+        .onReceive(presentCommentsSubject) { id in
+            presentingCommentsID = id
         }
     }
     

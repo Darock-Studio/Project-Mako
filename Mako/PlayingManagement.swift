@@ -46,6 +46,19 @@ func playTrack(_ track: Track) async {
                 }
             }
         }
+        var credits = [String]()
+        for key in lyrics.keys.sorted() {
+            let value = lyrics[key]!
+            if value.contains(/^.*：.*$/) || value.contains(/^.*:.*$/) {
+                credits.append(value)
+                lyrics.removeValue(forKey: key)
+            } else {
+                break
+            }
+        }
+        if !credits.isEmpty, let lastKey = lyrics.keys.sorted().last {
+            lyrics.updateValue("%credits@\(credits.joined(separator: "\n"))", forKey: lastKey + 100)
+        }
     }
     let playURL = await getPlayURL(forTrackID: track.id)
     DispatchQueue.main.async {
@@ -55,7 +68,12 @@ func playTrack(_ track: Track) async {
 func getPlayURL(forTrackID id: Int64) async -> String {
     var playURL: String?
     if UserDefaults.standard.string(forKey: "AccountCookie") != nil {
-        let result = await requestJSON("\(apiBaseURL)/song/url/v1?id=\(id)&level=hires", headers: globalRequestHeaders)
+        #if !os(watchOS)
+        let quality = reachability == .wifi ? "hires" : "higher"
+        #else
+        let quality = "higher"
+        #endif
+        let result = await requestJSON("\(apiBaseURL)/song/url/v1?id=\(id)&level=\(quality)", headers: globalRequestHeaders)
         if case let .success(respJson) = result {
             playURL = respJson["data"][0]["url"].string
         }

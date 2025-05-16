@@ -83,6 +83,14 @@ struct NowPlayingView: View {
                                                                 .font(.system(size: 14, weight: .semibold))
                                                             #endif
                                                                 .fixedSize(horizontal: false, vertical: true)
+                                                        } else if lyrics[lyricKeys[i]]!.hasPrefix("%credits@") {
+                                                            Text(String(lyrics[lyricKeys[i]]!.dropFirst("%credits@".count)))
+                                                            #if !os(watchOS)
+                                                                .font(.system(size: 20, weight: .semibold))
+                                                            #else
+                                                                .font(.system(size: 12, weight: .semibold))
+                                                            #endif
+                                                                .fixedSize(horizontal: false, vertical: true)
                                                         } else {
                                                             Text(lyrics[lyricKeys[i]]!)
                                                             #if !os(watchOS)
@@ -116,7 +124,7 @@ struct NowPlayingView: View {
                                                     }
                                                 }
                                                 .opacity(currentScrolledId == lyricKeys[i] ? 1.0 : 0.6)
-                                                .blur(radius: currentScrolledId == lyricKeys[i] || isUserScrolling ? 0 : abs(currentScrolledId - lyricKeys[i]) / 3)
+                                                .blur(radius: currentScrolledId == lyricKeys[i] || isUserScrolling || lyrics[lyricKeys[i]]!.hasPrefix("%credits@") ? 0 : abs(currentScrolledId - lyricKeys[i]) / 3)
                                                 .padding(.vertical, 5)
                                                 .animation(.smooth, value: currentScrolledId)
                                                 .modifier(LyricButtonModifier {
@@ -174,7 +182,7 @@ struct NowPlayingView: View {
                             .onAppear {
                                 lyricScrollProxy = scrollProxy
                             }
-                            .onReceive(globalAudioPlayer.periodicTimePublisher()) { _ in
+                            .onReceive(globalAudioPlayer.periodicTimePublisher(forInterval: .init(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))) { _ in
                                 var newScrollId = 0.0
                                 var isUpdatedScrollId = false
                                 for i in 0..<lyricKeys.count where currentPlaybackTime < lyricKeys[i] {
