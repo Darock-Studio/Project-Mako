@@ -35,8 +35,9 @@ struct Album: Identifiable, Decodable {
     var createTime: Date
     var updateTime: Date?
     var trackCount: Int
-    var description: String
+    var description: String?
     var tags: [String]?
+    var artists: [Artist]?
     
     enum CodingKeys: CodingKey {
         case id
@@ -50,13 +51,15 @@ struct Album: Identifiable, Decodable {
         case description
         case tags
         case size
+        case artists
     }
     
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(Int64.self, forKey: .id)
         self.name = try container.decode(String.self, forKey: .name)
-        self.description = try container.decode(String.self, forKey: .description)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.artists = try container.decodeIfPresent([Artist].self, forKey: .artists)
         if let coverImgUrl = try container.decodeIfPresent(String.self, forKey: .coverImgUrl) {
             self.coverImgUrl = coverImgUrl
             self.createTime = Date(timeIntervalSince1970: Double(try container.decode(Int.self, forKey: .createTime)) / 1000)

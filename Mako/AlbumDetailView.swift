@@ -40,7 +40,7 @@ struct AlbumDetailView: View {
                         .cornerRadius(8)
                         .shadow(radius: 15, x: 3, y: 3)
                         Text(album.name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .multilineTextAlignment(.center)
                             .background {
                                 GeometryReader { geometry in
@@ -52,6 +52,32 @@ struct AlbumDetailView: View {
                             }
                             .padding([.top, .horizontal])
                         #if !os(watchOS)
+                        if let artists = album.artists {
+                            if artists.count == 1 {
+                                Button(action: {
+                                    gotoArtistSubject.send(artists.first!.id)
+                                }, label: {
+                                    Text(artists.first!.name)
+                                        .font(.system(size: 18, weight: .medium))
+                                })
+                                .buttonStyle(.borderless)
+                            } else {
+                                Menu {
+                                    ForEach(artists) { artist in
+                                        Button(action: {
+                                            gotoArtistSubject.send(artist.id)
+                                        }, label: {
+                                            Label(artist.name, systemImage: "music.microphone")
+                                        })
+                                    }
+                                } label: {
+                                    Text(artists.map { $0.name }.joined(separator: "/"))
+                                        .font(.system(size: 18, weight: .medium))
+                                        .multilineTextAlignment(.center)
+                                        .foregroundStyle(.gray)
+                                }
+                            }
+                        }
                         if let tags = album.tags {
                             Menu {
                                 ForEach(tags, id: \.self) { tag in
@@ -70,21 +96,26 @@ struct AlbumDetailView: View {
                             .padding([.bottom, .horizontal])
                         }
                         #endif
+                        #if os(iOS)
+                        Divider()
+                            .padding(.horizontal, -50)
+                            .offset(y: 10)
+                        #endif
                     }
                     .centerAligned()
                     #if !os(watchOS)
-                    .listRowSeparator(.hidden, edges: .top)
+                    .listRowSeparator(.hidden)
                     #endif
                     if let tracks {
-                        ForEach(tracks) { track in
+                        ForEach(0..<tracks.count, id: \.self) { i in
                             Button(action: {
                                 Task {
-                                    await playTrack(track)
+                                    await playTrack(tracks[i])
                                 }
                             }, label: {
                                 HStack {
                                     if type == .playlist {
-                                        WebImage(url: URL(string: "\(track.album.picUrl)?param=120y120")) { image in
+                                        WebImage(url: URL(string: "\(tracks[i].album.picUrl)?param=150y150")) { image in
                                             image.resizable()
                                         } placeholder: {
                                             Rectangle()
@@ -92,18 +123,22 @@ struct AlbumDetailView: View {
                                                 .redacted(reason: .placeholder)
                                         }
                                         .scaledToFill()
-                                        .frame(width: 40, height: 40)
+                                        .frame(width: 50, height: 50)
                                         .clipped()
                                         .cornerRadius(3)
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(track.name)
+                                            Text(tracks[i].name)
                                                 .font(.system(size: 14))
-                                            Text(track.artists.map(\.name).joined(separator: " / "))
+                                            Text(tracks[i].artists.map(\.name).joined(separator: " / "))
                                                 .font(.system(size: 12))
                                                 .foregroundStyle(.gray)
                                         }
                                     } else {
-                                        Text(track.name)
+                                        Text(String(i + 1))
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.gray)
+                                            .frame(width: 20)
+                                        Text(tracks[i].name)
                                             .font(.system(size: 14))
                                     }
                                     Spacer()
@@ -128,7 +163,7 @@ struct AlbumDetailView: View {
 //                                    }
                                     #if !os(watchOS)
                                     Menu("", systemImage: "ellipsis") {
-                                        track.contextActions
+                                        tracks[i].contextActions
                                     }
                                     .font(.system(size: 14))
                                     .foregroundStyle(Color.primary)
@@ -166,7 +201,7 @@ struct AlbumDetailView: View {
                         .padding(.vertical)
                         #if os(iOS)
                         .listRowBackground(Color(UIColor.secondarySystemBackground))
-                        .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowInsets(.init(top: 0, leading: 10, bottom: 0, trailing: 0))
                         .listRowSeparator(.hidden)
                         #endif
                     }
@@ -181,7 +216,9 @@ struct AlbumDetailView: View {
                 .introspect(.scrollView, on: .iOS(.v18...)) { scrollView in
                     scrollObservation = scrollView.observe(\.contentOffset, options: .new) { _, value in
                         let scrollOffset = value.newValue ?? .init()
-                        isShowingNavigationTitle = scrollOffset.y - workTitleHeight > 170
+                        DispatchQueue.main.async {
+                            isShowingNavigationTitle = scrollOffset.y - workTitleHeight > 170
+                        }
                     }
                 }
                 #endif

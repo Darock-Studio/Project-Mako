@@ -10,8 +10,15 @@ import SwiftUI
 private struct SubjectNavigatableModifier: ViewModifier {
     @State var navigationArtistID: Int?
     @State var navigationAlbumID: Int64?
+    @State var isVisible = false
     func body(content: Content) -> some View {
         content
+            .onAppear {
+                isVisible = true
+            }
+            .onDisappear {
+                isVisible = false
+            }
             .navigationDestination(item: $navigationArtistID) { id in
                 ArtistDetailView(id: id)
             }
@@ -19,10 +26,14 @@ private struct SubjectNavigatableModifier: ViewModifier {
                 AlbumDetailView(id: id, type: .album)
             }
             .onReceive(gotoArtistSubject) { id in
-                navigationArtistID = id
+                if isVisible {
+                    navigationArtistID = id
+                }
             }
             .onReceive(gotoAlbumSubject) { id in
-                navigationAlbumID = id
+                if isVisible {
+                    navigationAlbumID = id
+                }
             }
     }
 }

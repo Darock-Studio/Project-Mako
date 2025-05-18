@@ -57,6 +57,7 @@ struct AccountView: View {
     struct LoginView: View {
         @Environment(\.dismiss) var dismiss
         @AppStorage("CachedUserName") var cachedUserName = ""
+        @AppStorage("UserID") var userID = ""
         @State var usernameInput = ""
         @State var passwordInput = ""
         @State var isLoggingIn = false
@@ -84,6 +85,7 @@ struct AccountView: View {
                                 )
                                 UserDefaults.standard.set(true, forKey: "IsLoggedIn")
                                 cachedUserName = respJson["profile"]["nickname"].string ?? ""
+                                userID = String(respJson["account"]["id"].int64Value)
                                 dismiss()
                             } else {
                                 

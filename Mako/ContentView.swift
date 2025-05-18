@@ -42,6 +42,10 @@ struct ContentView: View {
                     let slider = _volumeView.subviews.first(where: { $0 is UISlider }) as! UISlider
                     slider.value = value
                 }
+                .wrapIf(nowPlayingSheetPosition != .relativeTop(1)) { content in
+                    content
+                        .hidden()
+                }
             #endif
             TabView(selection: $tabSelection.onUpdate { oldValue, newValue in
                 if oldValue == newValue && newValue == 3 {
@@ -71,44 +75,26 @@ struct ContentView: View {
                         Image(_internalSystemName: "home.fill")
                         Text("主页")
                     }
-//                    NavigationStack {
-//                        RecentsView()
-//                            .toolbar {
-//                                ToolbarItem(placement: .topBarTrailing) {
-//                                    Button(action: {
-//                                        isAccountManagementPresented = true
-//                                    }, label: {
-//                                        Image(systemName: "person.crop.circle")
-//                                            .font(.system(size: 22, weight: .semibold))
-//                                            .foregroundStyle(.accent)
-//                                    })
-//                                }
-//                            }
-//                    }
-//                    .tag(4)
-//                    .tabItem {
-//                        Image(systemName: "clock.fill")
-//                        Text("最近浏览")
-//                    }
-//                    NavigationStack {
-//                        LibraryView()
-//                            .toolbar {
-//                                ToolbarItem(placement: .topBarTrailing) {
-//                                    Button(action: {
-//                                        isAccountManagementPresented = true
-//                                    }, label: {
-//                                        Image(systemName: "person.crop.circle")
-//                                            .font(.system(size: 22, weight: .semibold))
-//                                            .foregroundStyle(.accent)
-//                                    })
-//                                }
-//                            }
-//                    }
-//                    .tag(2)
-//                    .tabItem {
-//                        Image(systemName: "rectangle.stack.fill")
-//                        Text("资料库")
-//                    }
+                    NavigationStack {
+                        LibraryView()
+                            .subjectNavigatable()
+                            .toolbar {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    Button(action: {
+                                        isAccountManagementPresented = true
+                                    }, label: {
+                                        Image(systemName: "person.crop.circle")
+                                            .font(.system(size: 22, weight: .semibold))
+                                            .foregroundStyle(.accent)
+                                    })
+                                }
+                            }
+                    }
+                    .tag(2)
+                    .tabItem {
+                        Image(_internalSystemName: "music.square.stack.fill")
+                        Text("资料库")
+                    }
                     NavigationStack {
                         SearchView(isSearchKeyboardFocused: $isSearchKeyboardFocused)
                             .subjectNavigatable()
@@ -196,11 +182,16 @@ struct ContentView: View {
                                 }
                                 .matchedGeometryEffect(id: "Cover", in: nowPlayingCoverEffectNamespace, isSource: isNowPlayingShowingLyrics)
                                 .frame(width: 80, height: 80)
+                                .onTapGesture {
+                                    withAnimation(.easeOut) {
+                                        isNowPlayingShowingLyrics = false
+                                    }
+                                }
                             Rectangle()
                                 .fill(Color.clear)
                                 .overlay {
                                     VStack(alignment: .leading, spacing: 3) {
-                                        MarqueeText(text: nowPlayingTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 4, rightFade: 4, startDelay: 4, alignment: .leading)
+                                        MarqueeText(text: nowPlayingTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 15, rightFade: 15, startDelay: 4, alignment: .leading)
                                         Menu(nowPlayingTrack.artists.map { $0.name }.joined(separator: "/")) {
                                             ForEach(nowPlayingTrack.artists) { artist in
                                                 Button(action: {
@@ -211,6 +202,7 @@ struct ContentView: View {
                                             }
                                         }
                                         .font(.system(size: 14))
+                                        .lineLimit(1)
                                         .foregroundStyle(.white)
                                         .opacity(0.6)
                                     }
@@ -281,7 +273,7 @@ struct ContentView: View {
             .overlay {
                 Color.black.opacity(0.6)
             }
-            .clipShape(RoundedRectangle(cornerRadius: UIScreen.main.value(forKey: "_displayCornerRadius") as! Double))
+            .clipShape(RoundedRectangle(cornerRadius: (presentingCommentsID == nil) ? (UIScreen.main.value(forKey: "_displayCornerRadius") as! Double) : 0))
             .padding(-2)
         }
         .customThreshold(0.1)

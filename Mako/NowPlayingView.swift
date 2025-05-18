@@ -56,7 +56,7 @@ struct NowPlayingView: View {
                                             .frame(height: 20)
                                         if let firstKey = lyricKeys.first {
                                             if firstKey >= 2.0 {
-                                                WaitingDotsView(startTime: 0.0, endTime: firstKey, currentTime: $currentPlaybackTime)
+                                                WaitingDotsView(startTime: 0.0, endTime: firstKey)
                                             }
                                         }
                                         ForEach(0..<lyricKeys.count, id: \.self) { i in
@@ -158,7 +158,7 @@ struct NowPlayingView: View {
                                                     .allowsHitTesting(isUserScrolling)
                                                 } else {
                                                     if let endTime = lyricKeys[from: i &+ 1], endTime - lyricKeys[i] > 2.0 {
-                                                        WaitingDotsView(startTime: lyricKeys[i], endTime: endTime, currentTime: $currentPlaybackTime)
+                                                        WaitingDotsView(startTime: lyricKeys[i], endTime: endTime)
                                                         Spacer()
                                                     }
                                                 }
@@ -196,7 +196,7 @@ struct NowPlayingView: View {
                                 .onReceive(globalAudioPlayer.periodicTimePublisher(forInterval: .init(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))) { _ in
                                     var newScrollId = 0.0
                                     var isUpdatedScrollId = false
-                                    for i in 0..<lyricKeys.count where currentPlaybackTime < lyricKeys[i] {
+                                    for i in 0..<lyricKeys.count where globalAudioPlayer.currentTime().seconds < lyricKeys[i] {
                                         if let newKey = lyricKeys[from: i - 1] {
                                             newScrollId = newKey
                                         } else {
@@ -256,6 +256,7 @@ struct NowPlayingView: View {
                             .frame(width: screenBounds.width - (isPlaying ? 70 : 120), height: screenBounds.width - (isPlaying ? 70 : 120))
                             .shadow(radius: 15, x: 3, y: 3)
                             .padding(.bottom, 400)
+                            .allowsHitTesting(false)
                     }
                     // Audio Controls
                     MeshGradient(width: 3,
@@ -296,7 +297,7 @@ struct NowPlayingView: View {
                                         .fill(Color.clear)
                                         .overlay {
                                             VStack(alignment: .leading, spacing: 3) {
-                                                MarqueeText(text: nowPlaying.sourceTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 4, rightFade: 4, startDelay: 4, alignment: .leading)
+                                                MarqueeText(text: nowPlaying.sourceTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 15, rightFade: 15, startDelay: 4, alignment: .leading)
                                                 Menu(nowPlaying.sourceTrack.artists.map { $0.name }.joined(separator: "/")) {
                                                     ForEach(nowPlaying.sourceTrack.artists) { artist in
                                                         Button(action: {
@@ -307,6 +308,7 @@ struct NowPlayingView: View {
                                                     }
                                                 }
                                                 .font(.system(size: 14))
+                                                .lineLimit(1)
                                                 .foregroundStyle(.white)
                                                 .opacity(0.6)
                                             }
@@ -379,6 +381,7 @@ struct NowPlayingView: View {
                             }
                             .opacity(isProgressDraging ? 1 : 0.6)
                             .scaleEffect(isProgressDraging ? 1.05 : 1)
+                            .contentShape(Rectangle())
                             .animation(.easeOut(duration: 0.2), value: isProgressDraging)
                             #if !os(watchOS)
                             .padding(.horizontal, 30)
@@ -694,7 +697,7 @@ struct NowPlayingView: View {
         }
         .onReceive(globalAudioPlayer.periodicTimePublisher()) { time in
             // Code in this closure runs at nearly each frame, optimizing for speed is important.
-            if time.seconds - currentPlaybackTime >= 0.3 || time.seconds < currentPlaybackTime {
+            if time.seconds - currentPlaybackTime >= 0.5 || time.seconds < currentPlaybackTime {
                 currentPlaybackTime = time.seconds
             }
         }
@@ -703,7 +706,7 @@ struct NowPlayingView: View {
     struct WaitingDotsView: View {
         var startTime: Double
         var endTime: Double
-        @Binding var currentTime: Double
+        @State var currentTime = globalAudioPlayer.currentTime().seconds
         @State var dot1Opacity = 0.2
         @State var dot2Opacity = 0.2
         @State var dot3Opacity = 0.2
@@ -826,6 +829,11 @@ struct NowPlayingView: View {
                     withAnimation(.easeOut) {
                         verticalPadding = -15
                     }
+                }
+            }
+            .onReceive(globalAudioPlayer.periodicTimePublisher()) { time in
+                if time.seconds - currentTime >= 0.1 || time.seconds < currentTime {
+                    currentTime = time.seconds
                 }
             }
         }
