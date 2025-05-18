@@ -13,6 +13,7 @@ import DarockFoundation
 struct LibraryView: View {
     @AppStorage("IsLoggedIn") var isLoggedIn = false
     @AppStorage("UserID") var userID = ""
+    @State var isAccountManagementPresented = false
     var body: some View {
         Group {
             if isLoggedIn {
@@ -28,6 +29,21 @@ struct LibraryView: View {
         }
         .navigationTitle("资料库")
         .navigationBarTitleDisplayMode(.large)
+        .withNowPlayingButton()
+        #if os(watchOS)
+        .sheet(isPresented: $isAccountManagementPresented, content: { AccountView() })
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: {
+                    isAccountManagementPresented = true
+                }, label: {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.accent)
+                })
+            }
+        }
+        #endif
     }
     
     struct PlaylistView: View {
@@ -55,6 +71,7 @@ struct LibraryView: View {
             .listStyle(.plain)
             .navigationTitle("播放列表")
             .navigationBarTitleDisplayMode(.large)
+            .subjectNavigatable()
             .onAppear {
                 requestJSON("\(apiBaseURL)/user/playlist?uid=\(uid)&limit=10000", headers: globalRequestHeaders) { respJson, isSuccess in
                     if isSuccess {

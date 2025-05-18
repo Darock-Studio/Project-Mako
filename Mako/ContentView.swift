@@ -78,6 +78,7 @@ struct ContentView: View {
                     NavigationStack {
                         LibraryView()
                             .subjectNavigatable()
+                        #if !os(watchOS)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
                                     Button(action: {
@@ -89,6 +90,7 @@ struct ContentView: View {
                                     })
                                 }
                             }
+                        #endif
                     }
                     .tag(2)
                     .tabItem {

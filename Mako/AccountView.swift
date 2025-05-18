@@ -40,12 +40,10 @@ struct AccountView: View {
                     NavigationLink(destination: { SettingsView() }, label: {
                         Label("设置", systemImage: "gear")
                     })
+                    NavigationLink(destination: { AboutView() }, label: {
+                        Label("关于 App", systemImage: "info.circle.fill")
+                    })
                 }
-//                Section {
-//                    NavigationLink(destination: { AboutView() }, label: {
-//                        Label("关于 App", systemImage: "info.circle.fill")
-//                    })
-//                }
             }
             .navigationTitle("账户")
             .withDismissButton {

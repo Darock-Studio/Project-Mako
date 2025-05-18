@@ -22,7 +22,7 @@ struct NowPlayingButton: View {
             isNowPlayingViewPresented = true
         }, label: {
             if isAudioPlaying {
-                HStack {
+                HStack(spacing: 2) {
                     bar(low: 0.4)
                         .animation(animation.speed(1.8), value: drawingHeight)
                     bar(low: 0.3)
@@ -38,7 +38,7 @@ struct NowPlayingButton: View {
                     drawingHeight.toggle()
                 }
             } else {
-                HStack {
+                HStack(spacing: 2) {
                     bar(low: 0.3, high: 0.3)
                     bar(low: 0.5, high: 0.5)
                     bar(low: 0.3, high: 0.3)
@@ -74,7 +74,7 @@ struct NowPlayingButton: View {
             .fill(Color.accent)
             .frame(height: (drawingHeight ? high : low) * 10)
             .frame(width: 2, height: 10)
-            .padding(.horizontal, -2)
+//            .padding(.horizontal, -2)
     }
 }
 
