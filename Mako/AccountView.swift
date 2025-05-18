@@ -36,6 +36,11 @@ struct AccountView: View {
                         Label("登录", systemImage: "key.fill")
                     })
                 }
+                Section {
+                    NavigationLink(destination: { SettingsView() }, label: {
+                        Label("设置", systemImage: "gear")
+                    })
+                }
 //                Section {
 //                    NavigationLink(destination: { AboutView() }, label: {
 //                        Label("关于 App", systemImage: "info.circle.fill")

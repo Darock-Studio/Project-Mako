@@ -68,11 +68,22 @@ func playTrack(_ track: Track) async {
 func getPlayURL(forTrackID id: Int64) async -> String {
     var playURL: String?
     if UserDefaults.standard.string(forKey: "AccountCookie") != nil {
-        #if !os(watchOS)
-        let quality = reachability == .wifi ? "hires" : "higher"
-        #else
-        let quality = "higher"
-        #endif
+        let quality: String
+        if UserDefaults.standard.bool(forKey: "AQIsLoselessAudioEnabled") {
+            let celluarStreamQuality = AudioQuality(rawValue: UserDefaults.standard.string(forKey: "AQCelluarStreamQuality") ?? "") ?? .highQuality
+            let wifiStreamQuality = AudioQuality(rawValue: UserDefaults.standard.string(forKey: "AQWiFiStreamQuality") ?? "") ?? .highQuality
+            #if !os(watchOS)
+            quality = reachability == .wifi ? wifiStreamQuality.requestParameter : celluarStreamQuality.requestParameter
+            #else
+            quality = wifiStreamQuality.requestParameter
+            #endif
+        } else {
+            #if !os(watchOS)
+            quality = reachability == .wifi ? "exhigh" : "higher"
+            #else
+            quality = "higher"
+            #endif
+        }
         let result = await requestJSON("\(apiBaseURL)/song/url/v1?id=\(id)&level=\(quality)", headers: globalRequestHeaders)
         if case let .success(respJson) = result {
             playURL = respJson["data"][0]["url"].string

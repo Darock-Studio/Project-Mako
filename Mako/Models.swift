@@ -301,49 +301,55 @@ struct SearchResults {
             }
         case .album:
             ForEach(anyResults as! [Album]) { album in
-                HStack {
-                    WebImage(url: URL(string: album.coverImgUrl)) { image in
-                        image.resizable()
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray)
-                            .redacted(reason: .placeholder)
+                NavigationLink(destination: { AlbumDetailView(id: album.id, type: .album) }, label: {
+                    HStack {
+                        WebImage(url: URL(string: "\(album.coverImgUrl)?param=240y240")) { image in
+                            image.resizable()
+                        } placeholder: {
+                            Rectangle()
+                                .fill(Color.gray)
+                                .redacted(reason: .placeholder)
+                        }
+                        .scaledToFill()
+                        .frame(width: 60, height: 60)
+                        .clipped()
+                        .cornerRadius(5)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(album.name)
+                                .font(.system(size: 14))
+                            Text("专辑")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.gray)
+                        }
                     }
-                    .scaledToFill()
-                    .frame(width: 40, height: 40)
-                    .clipped()
-                    .cornerRadius(3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(album.name)
-                            .font(.system(size: 14))
-                        Text("专辑")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.gray)
-                    }
-                }
+                })
+                .listRowInsets(.init(top: 10, leading: 20, bottom: 10, trailing: 20))
             }
         case .artist:
             ForEach(anyResults as! [Artist]) { artist in
-                HStack {
-                    WebImage(url: URL(string: artist.picUrl!)) { image in
-                        image.resizable()
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray)
-                            .redacted(reason: .placeholder)
+                NavigationLink(destination: { ArtistDetailView(id: artist.id) }, label: {
+                    HStack {
+                        WebImage(url: URL(string: "\(artist.picUrl ?? "")?param=240y240")) { image in
+                            image.resizable()
+                        } placeholder: {
+                            Image(systemName: "music.microphone.circle.fill")
+                                .resizable()
+                                .font(.system(size: 100))
+                                .foregroundStyle(.white, .gray)
+                        }
+                        .scaledToFill()
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(artist.name)
+                                .font(.system(size: 14))
+                            Text("艺人")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.gray)
+                        }
                     }
-                    .scaledToFill()
-                    .frame(width: 40, height: 40)
-                    .clipped()
-                    .cornerRadius(3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(artist.name)
-                            .font(.system(size: 14))
-                        Text("艺人")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.gray)
-                    }
-                }
+                })
+                .listRowInsets(.init(top: 10, leading: 20, bottom: 10, trailing: 20))
             }
         case .playlist:
             ForEach(anyResults as! [Album]) { artist in
@@ -428,5 +434,39 @@ struct Comment: Identifiable, Decodable {
         var userId: Int
         var nickname: String
         var avatarUrl: String
+    }
+}
+
+enum AudioQuality: String, CaseIterable, Identifiable {
+    case highEfficiency
+    case highQuality
+    case loseless
+    case hiResLoseless
+    
+    var id: String { self.rawValue }
+    
+    var localizedName: LocalizedStringKey {
+        switch self {
+        case .highEfficiency: "高效"
+        case .highQuality:    "高质量"
+        case .loseless:       "无损"
+        case .hiResLoseless:  "高解析度无损"
+        }
+    }
+    var localizedDetail: LocalizedStringKey {
+        switch self {
+        case .highEfficiency: "HE-AAC，数据用量较低"
+        case .highQuality:    "AAC 256 kbps"
+        case .loseless:       "ALAC（最高24位/48kHZ）"
+        case .hiResLoseless:  "ALAC（最高24位/192kHZ）"
+        }
+    }
+    var requestParameter: String {
+        switch self {
+        case .highEfficiency: "higher"
+        case .highQuality:    "exhigh"
+        case .loseless:       "lossless"
+        case .hiResLoseless:  "hires"
+        }
     }
 }

@@ -11,10 +11,18 @@ import DarockUI
 import MediaPlayer
 import AVFoundation
 import DarockFoundation
+import SDWebImageSwiftUI
 
 struct NowPlayingView: View {
     var backgroundColors: [Color]
-    @Namespace var coverScaleNamespace
+    #if !os(watchOS)
+    var coverEffectNamespace: Namespace.ID
+    @Binding var isShowingLyrics: Bool
+    @Binding var isNowPlayingStarred: Bool
+    #else
+    @State var isShowingLyrics = true
+    #endif
+    @AppStorage("IsLoggedIn") var isLoggedIn = false
     @State var nowPlaying: NowPlayingInfo?
     @State var currentPlaybackTime = globalAudioPlayer.currentTime().seconds
     @State var playbackBehavior = PlaybackBehavior.singleLoop
@@ -38,192 +46,216 @@ struct NowPlayingView: View {
         VStack {
             if let nowPlaying {
                 ZStack {
-                    if let lyrics = nowPlaying.lyrics, !lyrics.isEmpty {
-                        ScrollViewReader { scrollProxy in
-                            let lyricKeys = Array<Double>(lyrics.keys).sorted(by: { lhs, rhs in lhs < rhs })
-                            ScrollView {
-                                VStack(alignment: .leading, spacing: 20) {
-                                    Spacer()
-                                        .frame(height: 20)
-                                    if let firstKey = lyricKeys.first {
-                                        if firstKey >= 2.0 {
-                                            WaitingDotsView(startTime: 0.0, endTime: firstKey, currentTime: $currentPlaybackTime)
-                                        }
-                                    }
-                                    ForEach(0..<lyricKeys.count, id: \.self) { i in
-                                        HStack {
-                                            if !lyrics[lyricKeys[i]]!.isEmpty {
-                                                HStack {
-                                                    if ({
-                                                        var singerSplitCount = 0
-                                                        for key in lyricKeys[0...i] {
-                                                            if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
-                                                                singerSplitCount++
-                                                            }
-                                                        }
-                                                        return singerSplitCount % 2 == 1
-                                                    }()) {
-                                                        Spacer()
-                                                    }
-                                                    VStack(alignment: .leading) {
-                                                        if lyrics[lyricKeys[i]]!.contains("%tranlyric@"),
-                                                           let src = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 0],
-                                                           let trans = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 1] {
-                                                            Text(src)
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: 30, weight: .bold))
-                                                            #else
-                                                                .font(.system(size: 16, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                            Text(trans)
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: 18, weight: .bold))
-                                                            #else
-                                                                .font(.system(size: 14, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                        } else if lyrics[lyricKeys[i]]!.hasPrefix("%credits@") {
-                                                            Text(String(lyrics[lyricKeys[i]]!.dropFirst("%credits@".count)))
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: 20, weight: .semibold))
-                                                            #else
-                                                                .font(.system(size: 12, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                        } else {
-                                                            Text(lyrics[lyricKeys[i]]!)
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 20 : 30, weight: .semibold))
-                                                            #else
-                                                                .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 14 : 16, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                                .padding(.bottom, lyrics[lyricKeys[i]]!.hasSuffix("：") ? -3 : 0)
-                                                        }
-                                                    }
-                                                    .multilineTextAlignment({
-                                                        var singerSplitCount = 0
-                                                        for key in lyricKeys[0...i] {
-                                                            if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
-                                                                singerSplitCount++
-                                                            }
-                                                        }
-                                                        return singerSplitCount % 2 == 0 ? .leading : .trailing
-                                                    }())
-                                                    if ({
-                                                        var singerSplitCount = 0
-                                                        for key in lyricKeys[0...i] {
-                                                            if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
-                                                                singerSplitCount++
-                                                            }
-                                                        }
-                                                        return singerSplitCount % 2 == 0
-                                                    }()) {
-                                                        Spacer(minLength: 20)
-                                                    }
-                                                }
-                                                .opacity(currentScrolledId == lyricKeys[i] ? 1.0 : 0.6)
-                                                .blur(radius: currentScrolledId == lyricKeys[i] || isUserScrolling || lyrics[lyricKeys[i]]!.hasPrefix("%credits@") ? 0 : abs(currentScrolledId - lyricKeys[i]) / 3)
-                                                .padding(.vertical, 5)
-                                                .animation(.smooth, value: currentScrolledId)
-                                                .modifier(LyricButtonModifier {
-                                                    globalAudioPlayer.seek(to: CMTime(seconds: lyricKeys[i], preferredTimescale: 60000),
-                                                                           toleranceBefore: .zero,
-                                                                           toleranceAfter: .zero)
-                                                    globalAudioPlayer.play()
-                                                    currentScrolledId = lyricKeys[i]
-                                                    isSoftScrolling = true
-                                                    withAnimation(.easeOut(duration: 0.5)) {
-                                                        lyricScrollProxy?.scrollTo(lyricKeys[i], anchor: .init(x: 0.5, y: 0.2))
-                                                    }
-                                                    Task {
-                                                        try? await Task.sleep(for: .seconds(0.6)) // Animation may take longer time than duration
-                                                        DispatchQueue.main.async {
-                                                            isSoftScrolling = false
-                                                        }
-                                                    }
-                                                })
-                                                .allowsHitTesting(isUserScrolling)
-                                            } else {
-                                                if let endTime = lyricKeys[from: i &+ 1], endTime - lyricKeys[i] > 2.0 {
-                                                    WaitingDotsView(startTime: lyricKeys[i], endTime: endTime, currentTime: $currentPlaybackTime)
-                                                    Spacer()
-                                                }
+                    if isShowingLyrics {
+                        if let lyrics = nowPlaying.lyrics, !lyrics.isEmpty {
+                            ScrollViewReader { scrollProxy in
+                                let lyricKeys = Array<Double>(lyrics.keys).sorted(by: { lhs, rhs in lhs < rhs })
+                                ScrollView {
+                                    VStack(alignment: .leading, spacing: 20) {
+                                        Spacer()
+                                            .frame(height: 20)
+                                        if let firstKey = lyricKeys.first {
+                                            if firstKey >= 2.0 {
+                                                WaitingDotsView(startTime: 0.0, endTime: firstKey, currentTime: $currentPlaybackTime)
                                             }
                                         }
-                                        .id(lyricKeys[i])
+                                        ForEach(0..<lyricKeys.count, id: \.self) { i in
+                                            HStack {
+                                                if !lyrics[lyricKeys[i]]!.isEmpty {
+                                                    HStack {
+                                                        if ({
+                                                            var singerSplitCount = 0
+                                                            for key in lyricKeys[0...i] {
+                                                                if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
+                                                                    singerSplitCount++
+                                                                }
+                                                            }
+                                                            return singerSplitCount % 2 == 1
+                                                        }()) {
+                                                            Spacer()
+                                                        }
+                                                        VStack(alignment: .leading) {
+                                                            if lyrics[lyricKeys[i]]!.contains("%tranlyric@"),
+                                                               let src = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 0],
+                                                               let trans = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 1] {
+                                                                Text(src)
+                                                                #if !os(watchOS)
+                                                                    .font(.system(size: 30, weight: .bold))
+                                                                #else
+                                                                    .font(.system(size: 16, weight: .semibold))
+                                                                #endif
+                                                                    .fixedSize(horizontal: false, vertical: true)
+                                                                Spacer()
+                                                                    .frame(height: 4)
+                                                                Text(trans)
+                                                                #if !os(watchOS)
+                                                                    .font(.system(size: 18, weight: .bold))
+                                                                #else
+                                                                    .font(.system(size: 14, weight: .semibold))
+                                                                #endif
+                                                                    .fixedSize(horizontal: false, vertical: true)
+                                                            } else if lyrics[lyricKeys[i]]!.hasPrefix("%credits@") {
+                                                                Text(String(lyrics[lyricKeys[i]]!.dropFirst("%credits@".count)))
+                                                                #if !os(watchOS)
+                                                                    .font(.system(size: 20, weight: .bold))
+                                                                #else
+                                                                    .font(.system(size: 12, weight: .semibold))
+                                                                #endif
+                                                                    .fixedSize(horizontal: false, vertical: true)
+                                                            } else {
+                                                                Text(lyrics[lyricKeys[i]]!)
+                                                                #if !os(watchOS)
+                                                                    .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 20 : 30, weight: .bold))
+                                                                #else
+                                                                    .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 14 : 16, weight: .semibold))
+                                                                #endif
+                                                                    .fixedSize(horizontal: false, vertical: true)
+                                                                    .padding(.bottom, lyrics[lyricKeys[i]]!.hasSuffix("：") ? -3 : 0)
+                                                            }
+                                                        }
+                                                        .multilineTextAlignment({
+                                                            var singerSplitCount = 0
+                                                            for key in lyricKeys[0...i] {
+                                                                if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
+                                                                    singerSplitCount++
+                                                                }
+                                                            }
+                                                            return singerSplitCount % 2 == 0 ? .leading : .trailing
+                                                        }())
+                                                        if ({
+                                                            var singerSplitCount = 0
+                                                            for key in lyricKeys[0...i] {
+                                                                if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
+                                                                    singerSplitCount++
+                                                                }
+                                                            }
+                                                            return singerSplitCount % 2 == 0
+                                                        }()) {
+                                                            Spacer(minLength: 20)
+                                                        }
+                                                    }
+                                                    .opacity(currentScrolledId == lyricKeys[i] ? 1.0 : 0.6)
+                                                    .blur(radius: currentScrolledId == lyricKeys[i] || isUserScrolling || (lyrics[lyricKeys[i]]!.hasPrefix("%credits@") && currentScrolledId == lyricKeys[from: lyricKeys.count - 2]) ? 0 : abs(currentScrolledId - lyricKeys[i]) / 3)
+                                                    .padding(.vertical, 5)
+                                                    .animation(.smooth, value: currentScrolledId)
+                                                    .modifier(LyricButtonModifier {
+                                                        globalAudioPlayer.seek(to: CMTime(seconds: lyricKeys[i], preferredTimescale: 60000),
+                                                                               toleranceBefore: .zero,
+                                                                               toleranceAfter: .zero)
+                                                        globalAudioPlayer.play()
+                                                        currentScrolledId = lyricKeys[i]
+                                                        isSoftScrolling = true
+                                                        withAnimation(.easeOut(duration: 0.5)) {
+                                                            lyricScrollProxy?.scrollTo(lyricKeys[i], anchor: .init(x: 0.5, y: 0.2))
+                                                        }
+                                                        Task {
+                                                            try? await Task.sleep(for: .seconds(0.6)) // Animation may take longer time than duration
+                                                            DispatchQueue.main.async {
+                                                                isSoftScrolling = false
+                                                            }
+                                                        }
+                                                    })
+                                                    .allowsHitTesting(isUserScrolling)
+                                                } else {
+                                                    if let endTime = lyricKeys[from: i &+ 1], endTime - lyricKeys[i] > 2.0 {
+                                                        WaitingDotsView(startTime: lyricKeys[i], endTime: endTime, currentTime: $currentPlaybackTime)
+                                                        Spacer()
+                                                    }
+                                                }
+                                            }
+                                            .id(lyricKeys[i])
+                                        }
+                                        .scrollTransition { content, phase in
+                                            content
+                                                .scaleEffect(phase.isIdentity ? 1 : 0.98)
+                                                .opacity(phase.isIdentity ? 1 : 0.5)
+                                                .offset(y: phase == .bottomTrailing ? 10 : 0)
+                                        }
+                                        Spacer()
+                                            .frame(height: 200)
                                     }
-                                    .scrollTransition { content, phase in
-                                        content
-                                            .scaleEffect(phase.isIdentity ? 1 : 0.98)
-                                            .opacity(phase.isIdentity ? 1 : 0.5)
-                                            .offset(y: phase == .bottomTrailing ? 10 : 0)
-                                    }
-                                    Spacer()
-                                        .frame(height: 200)
+                                    #if !os(watchOS)
+                                    .padding(.horizontal, 30)
+                                    .padding(.vertical)
+                                    #endif
                                 }
-                                #if !os(watchOS)
-                                .padding(.horizontal, 30)
-                                .padding(.vertical)
-                                #endif
-                            }
-                            .withScrollOffsetUpdate()
-                            .onPreferenceChange(ScrollViewOffsetPreferenceKey.self) { _ in
-                                if !isSoftScrolling {
-                                    // Scrolled by user (not auto scrolling lyrics)
-                                    isUserScrolling = true
-                                    userScrollingResetTimer?.invalidate()
-                                    userScrollingResetTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { _ in
-                                        isUserScrolling = false
+                                .withScrollOffsetUpdate()
+                                .onPreferenceChange(ScrollViewOffsetPreferenceKey.self) { _ in
+                                    if !isSoftScrolling {
+                                        // Scrolled by user (not auto scrolling lyrics)
+                                        isUserScrolling = true
+                                        userScrollingResetTimer?.invalidate()
+                                        userScrollingResetTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { _ in
+                                            isUserScrolling = false
+                                        }
+                                    }
+                                }
+                                .onAppear {
+                                    lyricScrollProxy = scrollProxy
+                                }
+                                .onReceive(globalAudioPlayer.periodicTimePublisher(forInterval: .init(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))) { _ in
+                                    var newScrollId = 0.0
+                                    var isUpdatedScrollId = false
+                                    for i in 0..<lyricKeys.count where currentPlaybackTime < lyricKeys[i] {
+                                        if let newKey = lyricKeys[from: i - 1] {
+                                            newScrollId = newKey
+                                        } else {
+                                            newScrollId = lyricKeys[i]
+                                        }
+                                        isUpdatedScrollId = true
+                                        break
+                                    }
+                                    if _slowPath(!isUpdatedScrollId && !lyricKeys.isEmpty) {
+                                        newScrollId = lyricKeys.last!
+                                    }
+                                    if _slowPath(newScrollId != currentScrolledId && !isUserScrolling) {
+                                        softScrollingResetTask?.cancel()
+                                        currentScrolledId = newScrollId
+                                        isSoftScrolling = true
+                                        withAnimation(.easeOut(duration: 0.5)) {
+                                            scrollProxy.scrollTo(newScrollId, anchor: .init(x: 0.5, y: 0.2))
+                                        }
+                                        softScrollingResetTask = Task {
+                                            do {
+                                                try await Task.sleep(for: .seconds(1.5)) // Animation may take longer time than duration
+                                                guard !Task.isCancelled else { return }
+                                                DispatchQueue.main.async {
+                                                    isSoftScrolling = false
+                                                }
+                                            } catch {
+                                                // Catch if task was canceled, do nothing.
+                                            }
+                                        }
                                     }
                                 }
                             }
                             .onAppear {
-                                lyricScrollProxy = scrollProxy
+                                // rdar://FB268002074511
+                                isSoftScrolling = false
                             }
-                            .onReceive(globalAudioPlayer.periodicTimePublisher(forInterval: .init(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))) { _ in
-                                var newScrollId = 0.0
-                                var isUpdatedScrollId = false
-                                for i in 0..<lyricKeys.count where currentPlaybackTime < lyricKeys[i] {
-                                    if let newKey = lyricKeys[from: i - 1] {
-                                        newScrollId = newKey
-                                    } else {
-                                        newScrollId = lyricKeys[i]
-                                    }
-                                    isUpdatedScrollId = true
-                                    break
-                                }
-                                if _slowPath(!isUpdatedScrollId && !lyricKeys.isEmpty) {
-                                    newScrollId = lyricKeys.last!
-                                }
-                                if _slowPath(newScrollId != currentScrolledId && !isUserScrolling) {
-                                    softScrollingResetTask?.cancel()
-                                    currentScrolledId = newScrollId
-                                    isSoftScrolling = true
-                                    withAnimation(.easeOut(duration: 0.5)) {
-                                        scrollProxy.scrollTo(newScrollId, anchor: .init(x: 0.5, y: 0.2))
-                                    }
-                                    softScrollingResetTask = Task {
-                                        do {
-                                            try await Task.sleep(for: .seconds(1.5)) // Animation may take longer time than duration
-                                            guard !Task.isCancelled else { return }
-                                            DispatchQueue.main.async {
-                                                isSoftScrolling = false
-                                            }
-                                        } catch {
-                                            // Catch if task was canceled, do nothing.
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .onAppear {
-                            // rdar://FB268002074511
-                            isSoftScrolling = false
+                        } else {
+                            Text("文本不可用")
                         }
                     } else {
-                        Text("文本不可用")
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.clear)
+                            .overlay {
+                                WebImage(url: URL(string: nowPlaying.sourceTrack.album.picUrl)) { image in
+                                    image.resizable()
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray)
+                                        .redacted(reason: .placeholder)
+                                }
+                                .scaledToFill()
+                                .cornerRadius(8)
+                            }
+                            #if !os(watchOS)
+                            .matchedGeometryEffect(id: "Cover", in: coverEffectNamespace, isSource: !isShowingLyrics)
+                            #endif
+                            .frame(width: screenBounds.width - (isPlaying ? 70 : 120), height: screenBounds.width - (isPlaying ? 70 : 120))
+                            .shadow(radius: 15, x: 3, y: 3)
+                            .padding(.bottom, 400)
                     }
                     // Audio Controls
                     MeshGradient(width: 3,
@@ -257,6 +289,61 @@ struct NowPlayingView: View {
                     VStack {
                         Spacer()
                         VStack {
+                            #if !os(watchOS)
+                            if !isShowingLyrics {
+                                HStack {
+                                    Rectangle()
+                                        .fill(Color.clear)
+                                        .overlay {
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                MarqueeText(text: nowPlaying.sourceTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 4, rightFade: 4, startDelay: 4, alignment: .leading)
+                                                Menu(nowPlaying.sourceTrack.artists.map { $0.name }.joined(separator: "/")) {
+                                                    ForEach(nowPlaying.sourceTrack.artists) { artist in
+                                                        Button(action: {
+                                                            gotoArtistSubject.send(artist.id)
+                                                        }, label: {
+                                                            Label(artist.name, systemImage: "music.microphone")
+                                                        })
+                                                    }
+                                                }
+                                                .font(.system(size: 14))
+                                                .foregroundStyle(.white)
+                                                .opacity(0.6)
+                                            }
+                                        }
+                                        .matchedGeometryEffect(id: "Info", in: coverEffectNamespace, isSource: !isShowingLyrics)
+                                        .frame(height: 100)
+                                    Spacer()
+                                    Rectangle()
+                                        .fill(Color.clear)
+                                        .overlay {
+                                            HStack(spacing: 10) {
+                                                if isLoggedIn {
+                                                    StarButton(isStarred: $isNowPlayingStarred) {
+                                                        requestJSON("\(apiBaseURL)/like?id=\(nowPlaying.sourceTrack.id)&like=\(!isNowPlayingStarred)", headers: globalRequestHeaders) { _, _ in }
+                                                        isNowPlayingStarred.toggle()
+                                                    }
+                                                }
+                                                Menu {
+                                                    nowPlaying.sourceTrack.contextActions
+                                                } label: {
+                                                    Image(systemName: "ellipsis")
+                                                        .font(.system(size: 14, weight: .bold))
+                                                        .foregroundStyle(.white)
+                                                        .padding(6)
+                                                }
+                                                .menuStyle(.button)
+                                                .buttonStyle(.bordered)
+                                                .buttonBorderShape(.circle)
+                                                .padding(.horizontal, -10)
+                                            }
+                                        }
+                                        .matchedGeometryEffect(id: "Control", in: coverEffectNamespace, isSource: !isShowingLyrics)
+                                        .frame(width: 100, height: 80)
+                                }
+                                .padding(.horizontal, 30)
+                            }
+                            #endif
                             VStack {
                                 CustomProgressView(value: isProgressDraging ? progressDragingNewTime : currentPlaybackTime, total: currentItemTotalTime)
                                     .shadow(radius: isProgressDraging ? 2 : 0)
@@ -452,7 +539,30 @@ struct NowPlayingView: View {
                             #if !os(watchOS)
                             HStack {
                                 Spacer()
-                                #if os(iOS)
+                                Button(action: {
+                                    withAnimation(.easeOut) {
+                                        isShowingLyrics.toggle()
+                                    }
+                                    isShowingControls = true
+                                    resetMenuDismissTimer()
+                                }, label: {
+                                    if isShowingLyrics {
+                                        RoundedRectangle(cornerRadius: 7)
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(width: 30, height: 30)
+                                            .reversedMask {
+                                                Image(systemName: "quote.bubble")
+                                                    .font(.system(size: 20))
+                                            }
+                                    } else {
+                                        Image(systemName: "quote.bubble")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.white)
+                                            .opacity(0.6)
+                                    }
+                                })
+                                .buttonStyle(.borderless)
+                                Spacer()
                                 GenericUIViewRepresentable(view: {
                                     let view = AVRoutePickerView()
                                     view.tintColor = UIColor(white: 1, alpha: 0.6)
@@ -461,7 +571,6 @@ struct NowPlayingView: View {
                                 }())
                                 .frame(width: 50, height: 50)
                                 Spacer()
-                                #endif
                                 Button(action: {
                                     switch playbackBehavior {
                                     case .pause:
@@ -506,8 +615,8 @@ struct NowPlayingView: View {
                         #if !os(watchOS)
                         .padding(.bottom, 40)
                         #endif
-                        .opacity(isShowingControls || nowPlaying.lyrics == nil ? 1.0 : 0.0)
-                        .offset(y: isShowingControls || nowPlaying.lyrics == nil ? 0 : 10)
+                        .opacity(isShowingControls || nowPlaying.lyrics == nil || !isShowingLyrics ? 1.0 : 0.0)
+                        .offset(y: isShowingControls || nowPlaying.lyrics == nil || !isShowingLyrics ? 0 : 10)
                         .animation(.easeOut(duration: 0.2), value: isShowingControls)
                     }
                     .ignoresSafeArea()

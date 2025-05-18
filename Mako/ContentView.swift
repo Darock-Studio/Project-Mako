@@ -18,9 +18,11 @@ import BottomSheet
 
 struct ContentView: View {
     @FocusState var isSearchKeyboardFocused: Bool
+    @Namespace var nowPlayingCoverEffectNamespace
     @Environment(\.colorScheme) var colorScheme
     @AppStorage("IsLoggedIn") var isLoggedIn = false
     @AppStorage("MainTabSelection") var tabSelection = 1
+    @AppStorage("IsNowPlayingShowingLyrics") var isNowPlayingShowingLyrics = true
     @State var nowPlayingTrack: Track?
     @State var nowPlayingBackgroundColors = Array(repeating: Color(uiColor: .darkGray), count: 16)
     @State var isAccountManagementPresented = false
@@ -178,61 +180,85 @@ struct ContentView: View {
                     .allowsHitTesting(false)
                 HStack(spacing: 10) {
                     if let nowPlayingTrack {
-                        WebImage(url: URL(string: nowPlayingTrack.album.picUrl)) { image in
-                            image.resizable()
-                        } placeholder: {
-                            Rectangle()
-                                .fill(Color.gray)
-                                .redacted(reason: .placeholder)
-                        }
-                        .scaledToFill()
-                        .frame(width: 80, height: 80)
-                        .clipped()
-                        .cornerRadius(6)
-                        VStack(alignment: .leading, spacing: 3) {
-                            MarqueeText(text: nowPlayingTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 4, rightFade: 4, startDelay: 4, alignment: .leading)
-                            Menu(nowPlayingTrack.artists.map { $0.name }.joined(separator: "/")) {
-                                ForEach(nowPlayingTrack.artists) { artist in
-                                    Button(action: {
-                                        performSearchSubject.send(artist.name)
-                                    }, label: {
-                                        Label(artist.name, systemImage: "magnifyingglass")
-                                    })
+                        if isNowPlayingShowingLyrics {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.clear)
+                                .overlay {
+                                    WebImage(url: URL(string: nowPlayingTrack.album.picUrl)) { image in
+                                        image.resizable()
+                                    } placeholder: {
+                                        Rectangle()
+                                            .fill(Color.gray)
+                                            .redacted(reason: .placeholder)
+                                    }
+                                    .scaledToFill()
+                                    .cornerRadius(6)
                                 }
-                            }
-                            .font(.system(size: 14))
-                            .foregroundStyle(.white)
-                            .opacity(0.6)
+                                .matchedGeometryEffect(id: "Cover", in: nowPlayingCoverEffectNamespace, isSource: isNowPlayingShowingLyrics)
+                                .frame(width: 80, height: 80)
+                            Rectangle()
+                                .fill(Color.clear)
+                                .overlay {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        MarqueeText(text: nowPlayingTrack.name, font: .systemFont(ofSize: 14, weight: .bold), leftFade: 4, rightFade: 4, startDelay: 4, alignment: .leading)
+                                        Menu(nowPlayingTrack.artists.map { $0.name }.joined(separator: "/")) {
+                                            ForEach(nowPlayingTrack.artists) { artist in
+                                                Button(action: {
+                                                    gotoArtistSubject.send(artist.id)
+                                                }, label: {
+                                                    Label(artist.name, systemImage: "music.microphone")
+                                                })
+                                            }
+                                        }
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(.white)
+                                        .opacity(0.6)
+                                    }
+                                }
+                                .matchedGeometryEffect(id: "Info", in: nowPlayingCoverEffectNamespace, isSource: isNowPlayingShowingLyrics)
+                                .frame(height: 80)
+                            Rectangle()
+                                .fill(Color.clear)
+                                .overlay {
+                                    HStack(spacing: 10) {
+                                        if isLoggedIn {
+                                            StarButton(isStarred: $isNowPlayingStarred) {
+                                                requestJSON("\(apiBaseURL)/like?id=\(nowPlayingTrack.id)&like=\(!isNowPlayingStarred)", headers: globalRequestHeaders) { _, _ in }
+                                                isNowPlayingStarred.toggle()
+                                            }
+                                        }
+                                        Menu {
+                                            nowPlayingTrack.contextActions
+                                        } label: {
+                                            Image(systemName: "ellipsis")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .foregroundStyle(.white)
+                                                .padding(6)
+                                        }
+                                        .menuStyle(.button)
+                                        .buttonStyle(.bordered)
+                                        .buttonBorderShape(.circle)
+                                        .padding(.horizontal, -10)
+                                    }
+                                }
+                                .matchedGeometryEffect(id: "Control", in: nowPlayingCoverEffectNamespace, isSource: isNowPlayingShowingLyrics)
+                                .frame(width: 100, height: 80)
                         }
-                        if isLoggedIn {
-                            StarButton(isStarred: $isNowPlayingStarred) {
-                                requestJSON("\(apiBaseURL)/like?id=\(nowPlayingTrack.id)&like=\(!isNowPlayingStarred)", headers: globalRequestHeaders) { _, _ in }
-                                isNowPlayingStarred.toggle()
-                            }
-                        }
-                        Menu {
-                            nowPlayingTrack.contextActions
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(6)
-                        }
-                        .menuStyle(.button)
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.circle)
-                        .padding(.horizontal, -10)
                     }
                 }
             }
             .padding()
             .padding(.horizontal)
-            .padding(.top, 35)
+            .padding(.top, UIApplication.shared.windows.filter { $0.isKeyWindow }.first!.safeAreaInsets.top)
             .environment(\.colorScheme, .dark)
         } mainContent: {
-            NowPlayingView(backgroundColors: nowPlayingBackgroundColors)
+            NowPlayingView(backgroundColors: nowPlayingBackgroundColors, coverEffectNamespace: nowPlayingCoverEffectNamespace, isShowingLyrics: $isNowPlayingShowingLyrics, isNowPlayingStarred: $isNowPlayingStarred)
                 .mask {
-                    LinearGradient(colors: [.black.opacity(0), .black, .black, .black, .black, .black, .black, .black], startPoint: .top, endPoint: .bottom)
+                    if isNowPlayingShowingLyrics {
+                        LinearGradient(colors: [.black.opacity(0), .black, .black, .black, .black, .black, .black, .black], startPoint: .top, endPoint: .bottom)
+                    } else {
+                        Rectangle()
+                    }
                 }
         }
         .showDragIndicator(false)
@@ -255,6 +281,8 @@ struct ContentView: View {
             .overlay {
                 Color.black.opacity(0.6)
             }
+            .clipShape(RoundedRectangle(cornerRadius: UIScreen.main.value(forKey: "_displayCornerRadius") as! Double))
+            .padding(-2)
         }
         .customThreshold(0.1)
         .ignoresSafeArea(edges: .top)

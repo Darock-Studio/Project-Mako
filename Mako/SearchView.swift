@@ -15,14 +15,82 @@ struct SearchView: View {
     @Environment(\.colorScheme) var colorScheme
     @State var searchText = ""
     @State var searchContentType = SearchResults.ContentType.song
+    @State var isSearching = false
     @State var searchResults: SearchResults?
     @State var recentSearches = [String]()
     var body: some View {
         List {
+            if !searchText.isEmpty {
+                ScrollView(.horizontal) {
+                    HStack {
+                        Button(action: {
+                            Task {
+                                searchContentType = .song
+                                if !isSearchKeyboardFocused.wrappedValue {
+                                    await performSearch(searchText)
+                                }
+                            }
+                        }, label: {
+                            Text("歌曲")
+                        })
+                        .wrapIf(searchContentType != .song) { button in
+                            button
+                                .foregroundStyle(Color.primary)
+                            #if !os(watchOS)
+                                .tint(.init(uiColor: .systemBackground))
+                            #endif
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        Button(action: {
+                            Task {
+                                searchContentType = .album
+                                if !isSearchKeyboardFocused.wrappedValue {
+                                    await performSearch(searchText)
+                                }
+                            }
+                        }, label: {
+                            Text("专辑")
+                        })
+                        .wrapIf(searchContentType != .album) { button in
+                            button
+                                .foregroundStyle(Color.primary)
+                            #if !os(watchOS)
+                                .tint(.init(uiColor: .systemBackground))
+                            #endif
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        Button(action: {
+                            Task {
+                                searchContentType = .artist
+                                if !isSearchKeyboardFocused.wrappedValue {
+                                    await performSearch(searchText)
+                                }
+                            }
+                        }, label: {
+                            Text("艺人")
+                        })
+                        .wrapIf(searchContentType != .artist) { button in
+                            button
+                                .foregroundStyle(Color.primary)
+                            #if !os(watchOS)
+                                .tint(.init(uiColor: .systemBackground))
+                            #endif
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                    }
+                }
+                .listRowBackground(Color.clear)
+                #if !os(watchOS)
+                .listRowSeparator(.hidden)
+                #endif
+            }
             if let results = searchResults {
                 results.itemsView
             }
-            if searchResults == nil && !recentSearches.isEmpty {
+            if searchResults == nil && !recentSearches.isEmpty && !isSearching {
                 HStack {
                     Text("最近搜索")
                         .font(.system(size: 17, weight: .semibold))
@@ -39,6 +107,7 @@ struct SearchView: View {
                 ForEach(recentSearches, id: \.self) { search in
                     Button(action: {
                         Task {
+                            searchText = search
                             await performSearch(search)
                         }
                     }, label: {
@@ -49,6 +118,13 @@ struct SearchView: View {
                     recentSearches.remove(atOffsets: indexs)
                     updateSearchHistory()
                 }
+            } else if isSearching {
+                ProgressView()
+                    .controlSize(.large)
+                    .centerAligned()
+                #if !os(watchOS)
+                    .listRowSeparator(.hidden)
+                #endif
             }
             Spacer()
                 .frame(height: 50)
@@ -93,7 +169,9 @@ struct SearchView: View {
     }
     
     func performSearch(_ text: String) async {
+        isSearching = true
         searchResults = await .init(type: searchContentType, keyword: text)
+        isSearching = false
     }
     func recentSearchInsert(_ text: String) {
         if !recentSearches.contains(text) {
