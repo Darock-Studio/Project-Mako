@@ -217,7 +217,7 @@ struct ContentView: View {
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(Color.clear)
                                 .overlay {
-                                    WebImage(url: URL(string: nowPlayingTrack.album.picUrl)) { image in
+                                    WebImage(url: URL(string: "\(nowPlayingTrack.album.picUrl)?param=210y210")) { image in
                                         image.resizable()
                                     } placeholder: {
                                         Rectangle()
@@ -228,7 +228,7 @@ struct ContentView: View {
                                     .cornerRadius(6)
                                 }
                                 .matchedGeometryEffect(id: "Cover", in: nowPlayingCoverEffectNamespace, isSource: isNowPlayingShowingLyrics)
-                                .frame(width: 80, height: 80)
+                                .frame(width: 70, height: 70)
                                 .onTapGesture {
                                     withAnimation(.easeOut) {
                                         isNowPlayingShowingLyrics = false
@@ -294,7 +294,7 @@ struct ContentView: View {
             NowPlayingView(backgroundColors: nowPlayingBackgroundColors, coverEffectNamespace: nowPlayingCoverEffectNamespace, isShowingLyrics: $isNowPlayingShowingLyrics, isShowingPlaylists: $isNowPlayingShowingPlaylists, isNowPlayingStarred: $isNowPlayingStarred)
                 .mask {
                     if isNowPlayingShowingLyrics {
-                        LinearGradient(colors: [.black.opacity(0), .black, .black, .black, .black, .black, .black, .black], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(colors: [.black.opacity(0), .black, .black, .black, .black, .black, .black, .black, .black, .black], startPoint: .top, endPoint: .bottom)
                     } else {
                         Rectangle()
                     }

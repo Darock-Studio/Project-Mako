@@ -15,8 +15,7 @@ import WatchKit
 
 // !!!: It's STRONGLY NOT RECOMMENDED to use this API endpoint
 // !!!: in your OWN project. It's UNSTABLE.
-let apiBaseURL = "http://mako.darock.top"
-//let apiBaseURL = "http://makoalt.darock.top:40721"
+var apiBaseURL = "http://mako.darock.top"
 
 var globalRequestHeaders: HTTPHeaders {
     [

@@ -9,6 +9,8 @@ import SwiftUI
 import DarockUI
 
 struct AboutView: View {
+    @State var isInternalChangeAPIEndpointPresented = false
+    @State var apiEndpointInput = apiBaseURL
     var body: some View {
         List {
             Section {
@@ -23,9 +25,11 @@ struct AboutView: View {
             } header: {
                 Text("源代码")
                     .textCase(nil)
+                #if !os(watchOS)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.primary)
                     .padding(.horizontal, -15)
+                #endif
             }
             Section {
                 SinglePackageBlock(name: "Alamofire", license: "MIT license")
@@ -37,21 +41,44 @@ struct AboutView: View {
             } header: {
                 Text("软件包引用")
                     .textCase(nil)
+                #if !os(watchOS)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.primary)
                     .padding(.horizontal, -15)
+                #endif
             }
             Section {
                 Text("Project Mako 仅用于学习 Swift 以及 SwiftUI 开发以及供个人、非商业性地使用，内容版权属于网易云音乐以及音乐创作者。")
+                    .contextMenu {
+                        Button("更改 API 端点", systemImage: "link") {
+                            isInternalChangeAPIEndpointPresented = true
+                        }
+                    }
             } header: {
                 Text(verbatim: "Disclaimer")
                     .textCase(nil)
+                #if !os(watchOS)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.primary)
                     .padding(.horizontal, -15)
+                #endif
             }
         }
         .navigationTitle("关于 App")
+        .sheet(isPresented: $isInternalChangeAPIEndpointPresented) {
+            Form {
+                TextField("API 端点", text: $apiEndpointInput)
+                    .submitLabel(.done)
+                    .noAutoInput()
+                    .onSubmit {
+                        apiBaseURL = apiEndpointInput
+                        isInternalChangeAPIEndpointPresented = false
+                    }
+            }
+            .withDismissButton {
+                isInternalChangeAPIEndpointPresented = false
+            }
+        }
     }
     
     struct SinglePackageBlock: View {

@@ -51,7 +51,7 @@ struct AlbumDetailView: View {
                         }
                         .scaledToFill()
                         #if !os(watchOS)
-                        .frame(width: 220, height: 220)
+                        .frame(width: 250, height: 250)
                         #else
                         .frame(width: 100, height: 100)
                         #endif
@@ -112,6 +112,22 @@ struct AlbumDetailView: View {
                                     .foregroundStyle(.gray)
                             }
                             .padding([.bottom, .horizontal])
+                        }
+                        HStack {
+                            Button(action: {
+                                if let tracks {
+                                    PlaylistManager.shared.replace(with: tracks)
+                                }
+                            }, label: {
+                                HStack {
+                                    Image(systemName: "play.fill")
+                                    Text("播放")
+                                }
+                                .foregroundStyle(.accent)
+                                .centerAligned()
+                                .padding(.vertical, 5)
+                            })
+                            .buttonStyle(.bordered)
                         }
                         Divider()
                             .padding(.horizontal, -50)
