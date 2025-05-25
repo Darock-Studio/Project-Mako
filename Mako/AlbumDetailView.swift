@@ -307,7 +307,7 @@ struct AlbumDetailView: View {
                     scrollObservation = scrollView.observe(\.contentOffset, options: .new) { _, value in
                         let scrollOffset = value.newValue ?? .init()
                         DispatchQueue.main.async {
-                            isShowingNavigationTitle = scrollOffset.y - workTitleHeight > 170
+                            isShowingNavigationTitle = scrollOffset.y - workTitleHeight > 220
                         }
                     }
                 }

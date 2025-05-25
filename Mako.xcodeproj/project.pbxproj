@@ -23,6 +23,8 @@
 		8C0E3F5B2DD9B64900D4A253 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0E3F592DD9B64400D4A253 /* LibraryView.swift */; };
 		8C0E45BA2DD9F3AF00D4A253 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0E45B92DD9F3AC00D4A253 /* AboutView.swift */; };
 		8C0E45BB2DD9F3AF00D4A253 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0E45B92DD9F3AC00D4A253 /* AboutView.swift */; };
+		8C104F152DE2F16F00D177D9 /* BottomSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 8C104F142DE2F16F00D177D9 /* BottomSheet */; };
+		8C104F182DE2FC9600D177D9 /* BottomSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 8C104F172DE2FC9600D177D9 /* BottomSheet */; };
 		8CCE66BF2DCFCD0200BE8475 /* StarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCE66BE2DCFCD0200BE8475 /* StarButton.swift */; };
 		8CCE66C02DCFCEDD00BE8475 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68BB2DC8AA4900EFACDB /* Models.swift */; };
 		8CCE66C12DCFCEDD00BE8475 /* Combine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68D32DCF66EF00EFACDB /* Combine.swift */; };
@@ -53,7 +55,6 @@
 		8CEC68A82DC8A61700EFACDB /* GlobalProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68A72DC8A61200EFACDB /* GlobalProperties.swift */; };
 		8CEC68AE2DC8A7E100EFACDB /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 8CEC68AD2DC8A7E100EFACDB /* SwiftUIIntrospect */; };
 		8CEC68B02DC8A7E700EFACDB /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 8CEC68AF2DC8A7E700EFACDB /* SwiftUIIntrospect */; };
-		8CEC68B32DC8A81800EFACDB /* BottomSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 8CEC68B22DC8A81800EFACDB /* BottomSheet */; };
 		8CEC68B72DC8A86D00EFACDB /* UIRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68B52DC8A86D00EFACDB /* UIRepresentable.swift */; };
 		8CEC68B92DC8A89200EFACDB /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68B82DC8A89000EFACDB /* HomeView.swift */; };
 		8CEC68BC2DC8AA4B00EFACDB /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CEC68BB2DC8AA4900EFACDB /* Models.swift */; };
@@ -139,9 +140,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				8CEC68C62DC8AB0F00EFACDB /* NotifKit in Frameworks */,
+				8C104F152DE2F16F00D177D9 /* BottomSheet in Frameworks */,
+				8C104F182DE2FC9600D177D9 /* BottomSheet in Frameworks */,
 				8CEC68C32DC8AB0200EFACDB /* SDWebImageSwiftUI in Frameworks */,
 				8CEC68AE2DC8A7E100EFACDB /* SwiftUIIntrospect in Frameworks */,
-				8CEC68B32DC8A81800EFACDB /* BottomSheet in Frameworks */,
 				8CEC689E2DC8A56C00EFACDB /* DarockUI in Frameworks */,
 				8CEC689B2DC8A55F00EFACDB /* DarockFoundation in Frameworks */,
 			);
@@ -254,9 +256,10 @@
 				8CEC689A2DC8A55F00EFACDB /* DarockFoundation */,
 				8CEC689D2DC8A56C00EFACDB /* DarockUI */,
 				8CEC68AD2DC8A7E100EFACDB /* SwiftUIIntrospect */,
-				8CEC68B22DC8A81800EFACDB /* BottomSheet */,
 				8CEC68C22DC8AB0200EFACDB /* SDWebImageSwiftUI */,
 				8CEC68C52DC8AB0F00EFACDB /* NotifKit */,
+				8C104F142DE2F16F00D177D9 /* BottomSheet */,
+				8C104F172DE2FC9600D177D9 /* BottomSheet */,
 			);
 			productName = Mako;
 			productReference = 8CEC686B2DC8A4B400EFACDB /* Mako.app */;
@@ -318,9 +321,9 @@
 				8CEC68992DC8A55E00EFACDB /* XCRemoteSwiftPackageReference "DarockFoundation" */,
 				8CEC689C2DC8A56C00EFACDB /* XCRemoteSwiftPackageReference "DarockUI" */,
 				8CEC68AC2DC8A7E100EFACDB /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */,
-				8CEC68B12DC8A81800EFACDB /* XCRemoteSwiftPackageReference "BottomSheet" */,
 				8CEC68C12DC8AB0200EFACDB /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 				8CEC68C42DC8AB0F00EFACDB /* XCRemoteSwiftPackageReference "NotifKit" */,
+				8C104F162DE2FC9600D177D9 /* XCRemoteSwiftPackageReference "BottomSheet" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8CEC686C2DC8A4B400EFACDB /* Products */;
@@ -706,6 +709,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		8C104F162DE2FC9600D177D9 /* XCRemoteSwiftPackageReference "BottomSheet" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/lucaszischka/BottomSheet";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.1;
+			};
+		};
 		8CEC68992DC8A55E00EFACDB /* XCRemoteSwiftPackageReference "DarockFoundation" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Darock-Studio/DarockFoundation";
@@ -730,14 +741,6 @@
 				minimumVersion = 1.3.0;
 			};
 		};
-		8CEC68B12DC8A81800EFACDB /* XCRemoteSwiftPackageReference "BottomSheet" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/lucaszischka/BottomSheet";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.1.1;
-			};
-		};
 		8CEC68C12DC8AB0200EFACDB /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI";
@@ -757,6 +760,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		8C104F142DE2F16F00D177D9 /* BottomSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BottomSheet;
+		};
+		8C104F172DE2FC9600D177D9 /* BottomSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8C104F162DE2FC9600D177D9 /* XCRemoteSwiftPackageReference "BottomSheet" */;
+			productName = BottomSheet;
+		};
 		8CEC689A2DC8A55F00EFACDB /* DarockFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 8CEC68992DC8A55E00EFACDB /* XCRemoteSwiftPackageReference "DarockFoundation" */;
@@ -786,11 +798,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8CEC68AC2DC8A7E100EFACDB /* XCRemoteSwiftPackageReference "SwiftUI-Introspect" */;
 			productName = SwiftUIIntrospect;
-		};
-		8CEC68B22DC8A81800EFACDB /* BottomSheet */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 8CEC68B12DC8A81800EFACDB /* XCRemoteSwiftPackageReference "BottomSheet" */;
-			productName = BottomSheet;
 		};
 		8CEC68C22DC8AB0200EFACDB /* SDWebImageSwiftUI */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -269,20 +269,68 @@ struct SearchResults {
     private var anyResults: [CodableResult] = []
     
     init(type: ContentType, keyword: String) async {
-        let result = await requestJSON("\(apiBaseURL)/cloudsearch?keywords=\(keyword)&type=\(type.rawValue)", headers: globalRequestHeaders)
-        if case let .success(respJson) = result {
-            switch type {
-            case .song:
-                anyResults = (getJsonData([Track].self, from: respJson["result"]["songs"].rawString()!) ?? []).map { .track($0) }
-            case .album:
-                anyResults = (getJsonData([Album].self, from: respJson["result"]["albums"].rawString()!) ?? []).map { .album($0) }
-            case .artist:
-                anyResults = (getJsonData([Artist].self, from: respJson["result"]["artists"].rawString()!) ?? []).map { .artist($0) }
-            case .playlist:
-                anyResults = (getJsonData([Album].self, from: respJson["result"]["playlists"].rawString()!) ?? []).map { .album($0) }
-            case .lyrics:
-                break // TODO: Add lyric searching feature
+        if type != .topResults {
+            let result = await requestJSON("\(apiBaseURL)/cloudsearch?keywords=\(keyword)&type=\(type.rawValue)")
+            if case let .success(respJson) = result {
+                switch type {
+                case .song:
+                    anyResults = (getJsonData([Track].self, from: respJson["result"]["songs"].rawString()!) ?? []).map { .track($0) }
+                case .album:
+                    anyResults = (getJsonData([Album].self, from: respJson["result"]["albums"].rawString()!) ?? []).map { .album($0) }
+                case .artist:
+                    anyResults = (getJsonData([Artist].self, from: respJson["result"]["artists"].rawString()!) ?? []).map { .artist($0) }
+                case .playlist:
+                    anyResults = (getJsonData([Album].self, from: respJson["result"]["playlists"].rawString()!) ?? []).map { .album($0) }
+                case .lyrics:
+                    break // TODO: Add lyric searching feature
+                default: break
+                }
             }
+        } else {
+            var results = [CodableResult]()
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    let result = await requestJSON("\(apiBaseURL)/cloudsearch?keywords=\(keyword)&type=\(ContentType.song.rawValue)")
+                    if case let .success(respJson) = result {
+                        results.append(contentsOf: (getJsonData([Track].self, from: respJson["result"]["songs"].rawString()!) ?? []).map { .track($0) })
+                    }
+                }
+                group.addTask {
+                    let result = await requestJSON("\(apiBaseURL)/cloudsearch?keywords=\(keyword)&type=\(ContentType.album.rawValue)")
+                    if case let .success(respJson) = result {
+                        results.append(contentsOf: (getJsonData([Album].self, from: respJson["result"]["albums"].rawString()!) ?? []).map { .album($0) }.prefix(10))
+                    }
+                }
+                group.addTask {
+                    let result = await requestJSON("\(apiBaseURL)/cloudsearch?keywords=\(keyword)&type=\(ContentType.artist.rawValue)")
+                    if case let .success(respJson) = result {
+                        results.append(contentsOf: (getJsonData([Artist].self, from: respJson["result"]["artists"].rawString()!) ?? []).map { .artist($0) }.prefix(5))
+                    }
+                }
+            }
+            var withSimilarity = [(result: CodableResult, similarity: Double)]()
+            for result in results {
+                switch result {
+                case .track(let track):
+                    withSimilarity.append((result, similarity(track.name, keyword)))
+                case .album(let album):
+                    withSimilarity.append((result, similarity(album.name, keyword)))
+                case .artist(let artist):
+                    if artist.picUrl == nil || artist.picUrl == "" {
+                        continue
+                    }
+                    withSimilarity.append((result, similarity(artist.name, keyword)))
+                }
+            }
+            self.anyResults = withSimilarity.prefix(30).sorted { $0.similarity > $1.similarity }.map { $0.result }
+        }
+        
+        func similarity(_ s1: String, _ s2: String) -> Double {
+            let set1 = Set(s1)
+            let set2 = Set(s2)
+            let intersection = set1.intersection(set2).count
+            let union = set1.union(set2).count
+            return union == 0 ? 1.0 : Double(intersection) / Double(union)
         }
     }
     init(fromCodableResults results: [CodableResult]) {
@@ -433,6 +481,7 @@ struct SearchResults {
     }
     
     enum ContentType: Int {
+        case topResults = 0
         case song = 1
         case album = 10
         case artist = 100

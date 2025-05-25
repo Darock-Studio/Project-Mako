@@ -63,104 +63,103 @@ struct NowPlayingView: View {
                                         }
                                     }
                                     ForEach(0..<lyricKeys.count, id: \.self) { i in
-                                        HStack {
-                                            if !lyrics[lyricKeys[i]]!.isEmpty {
-                                                HStack {
-                                                    if ({
-                                                        var singerSplitCount = 0
-                                                        for key in lyricKeys[0...i] {
-                                                            if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
-                                                                singerSplitCount++
-                                                            }
-                                                        }
-                                                        return singerSplitCount % 2 == 1
-                                                    }()) {
-                                                        Spacer()
-                                                    }
-                                                    VStack(alignment: .leading) {
-                                                        if lyrics[lyricKeys[i]]!.contains("%tranlyric@"),
-                                                           let src = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 0],
-                                                           let trans = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 1] {
-                                                            Text(src)
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: 30, weight: .bold))
-                                                            #else
-                                                                .font(.system(size: 16, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                            Spacer()
-                                                                .frame(height: 4)
-                                                            Text(trans)
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: 18, weight: .bold))
-                                                            #else
-                                                                .font(.system(size: 14, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                        } else if lyrics[lyricKeys[i]]!.hasPrefix("%credits@") {
-                                                            Text(String(lyrics[lyricKeys[i]]!.dropFirst("%credits@".count)))
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: 20, weight: .bold))
-                                                            #else
-                                                                .font(.system(size: 12, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                        } else {
-                                                            Text(lyrics[lyricKeys[i]]!)
-                                                            #if !os(watchOS)
-                                                                .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 20 : 30, weight: .bold))
-                                                            #else
-                                                                .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 14 : 16, weight: .semibold))
-                                                            #endif
-                                                                .fixedSize(horizontal: false, vertical: true)
-                                                                .padding(.bottom, lyrics[lyricKeys[i]]!.hasSuffix("：") ? -3 : 0)
+                                        if !lyrics[lyricKeys[i]]!.isEmpty {
+                                            HStack {
+                                                if ({
+                                                    var singerSplitCount = 0
+                                                    for key in lyricKeys[0...i] {
+                                                        if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
+                                                            singerSplitCount++
                                                         }
                                                     }
-                                                    .multilineTextAlignment({
-                                                        var singerSplitCount = 0
-                                                        for key in lyricKeys[0...i] {
-                                                            if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
-                                                                singerSplitCount++
-                                                            }
-                                                        }
-                                                        return singerSplitCount % 2 == 0 ? .leading : .trailing
-                                                    }())
-                                                    if ({
-                                                        var singerSplitCount = 0
-                                                        for key in lyricKeys[0...i] {
-                                                            if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
-                                                                singerSplitCount++
-                                                            }
-                                                        }
-                                                        return singerSplitCount % 2 == 0
-                                                    }()) {
-                                                        Spacer(minLength: 20)
-                                                    }
-                                                }
-                                                .opacity(currentScrolledId == lyricKeys[i] ? 1.0 : 0.6)
-                                                .scaleEffect(currentScrolledId == lyricKeys[i] ? 1.02 : 1, anchor: .leading)
-                                                .blur(radius: currentScrolledId == lyricKeys[i] || isUserScrolling || (lyrics[lyricKeys[i]]!.hasPrefix("%credits@") && currentScrolledId == lyricKeys[from: lyricKeys.count - 2]) ? 0 : abs(currentScrolledId - lyricKeys[i]) / 3)
-                                                .padding(.vertical, 5)
-                                                .animation(.smooth, value: currentScrolledId)
-                                                .modifier(LyricButtonModifier {
-                                                    globalAudioPlayer.seek(to: CMTime(seconds: lyricKeys[i], preferredTimescale: 60000),
-                                                                           toleranceBefore: .zero,
-                                                                           toleranceAfter: .zero)
-                                                    globalAudioPlayer.play()
-                                                    currentScrolledId = lyricKeys[i]
-                                                    withAnimation {
-                                                        lyricScrollPosition.scrollTo(id: lyricKeys[i])
-                                                    }
-                                                })
-                                                .allowsHitTesting(isUserScrolling)
-                                            } else {
-                                                if let endTime = lyricKeys[from: i &+ 1], endTime - lyricKeys[i] > 2.0 {
-                                                    WaitingDotsView(startTime: lyricKeys[i], endTime: endTime)
+                                                    return singerSplitCount % 2 == 1
+                                                }()) {
                                                     Spacer()
                                                 }
+                                                VStack(alignment: .leading) {
+                                                    if lyrics[lyricKeys[i]]!.contains("%tranlyric@"),
+                                                       let src = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 0],
+                                                       let trans = lyrics[lyricKeys[i]]!.components(separatedBy: "%tranlyric@")[from: 1] {
+                                                        Text(src)
+                                                        #if !os(watchOS)
+                                                            .font(.system(size: 30, weight: .bold))
+                                                        #else
+                                                            .font(.system(size: 16, weight: .semibold))
+                                                        #endif
+                                                            .fixedSize(horizontal: false, vertical: true)
+                                                        Spacer()
+                                                            .frame(height: 4)
+                                                        Text(trans)
+                                                        #if !os(watchOS)
+                                                            .font(.system(size: 18, weight: .bold))
+                                                        #else
+                                                            .font(.system(size: 14, weight: .semibold))
+                                                        #endif
+                                                            .fixedSize(horizontal: false, vertical: true)
+                                                    } else if lyrics[lyricKeys[i]]!.hasPrefix("%credits@") {
+                                                        Text(String(lyrics[lyricKeys[i]]!.dropFirst("%credits@".count)))
+                                                        #if !os(watchOS)
+                                                            .font(.system(size: 20, weight: .bold))
+                                                        #else
+                                                            .font(.system(size: 12, weight: .semibold))
+                                                        #endif
+                                                            .fixedSize(horizontal: false, vertical: true)
+                                                    } else {
+                                                        Text(lyrics[lyricKeys[i]]!)
+                                                        #if !os(watchOS)
+                                                            .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 20 : 30, weight: .bold))
+                                                        #else
+                                                            .font(.system(size: lyrics[lyricKeys[i]]!.hasSuffix("：") ? 14 : 16, weight: .semibold))
+                                                        #endif
+                                                            .fixedSize(horizontal: false, vertical: true)
+                                                            .padding(.bottom, lyrics[lyricKeys[i]]!.hasSuffix("：") ? -3 : 0)
+                                                    }
+                                                }
+                                                .multilineTextAlignment({
+                                                    var singerSplitCount = 0
+                                                    for key in lyricKeys[0...i] {
+                                                        if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
+                                                            singerSplitCount++
+                                                        }
+                                                    }
+                                                    return singerSplitCount % 2 == 0 ? .leading : .trailing
+                                                }())
+                                                if ({
+                                                    var singerSplitCount = 0
+                                                    for key in lyricKeys[0...i] {
+                                                        if let src = lyrics[key]!.components(separatedBy: "%tranlyric@")[from: 0], src.hasSuffix("：") {
+                                                            singerSplitCount++
+                                                        }
+                                                    }
+                                                    return singerSplitCount % 2 == 0
+                                                }()) {
+                                                    Spacer(minLength: 20)
+                                                }
                                             }
+                                            .opacity(currentScrolledId == lyricKeys[i] ? 1.0 : 0.6)
+                                            .scaleEffect(currentScrolledId == lyricKeys[i] ? 1.02 : 1, anchor: .leading)
+                                            .blur(radius: currentScrolledId == lyricKeys[i] || isUserScrolling || (lyrics[lyricKeys[i]]!.hasPrefix("%credits@") && currentScrolledId == lyricKeys[from: lyricKeys.count - 2]) ? 0 : abs(currentScrolledId - lyricKeys[i]) / 3)
+                                            .padding(.vertical, 5)
+                                            .animation(.smooth, value: currentScrolledId)
+                                            .modifier(LyricButtonModifier {
+                                                globalAudioPlayer.seek(to: CMTime(seconds: lyricKeys[i], preferredTimescale: 60000),
+                                                                       toleranceBefore: .zero,
+                                                                       toleranceAfter: .zero)
+                                                globalAudioPlayer.play()
+                                                currentScrolledId = lyricKeys[i]
+                                                withAnimation {
+                                                    lyricScrollPosition.scrollTo(id: lyricKeys[i])
+                                                }
+                                            })
+                                            .allowsHitTesting(isUserScrolling)
+                                            .id(lyricKeys[i])
+                                        } else if let endTime = lyricKeys[from: i &+ 1], endTime - lyricKeys[i] > 2.0 {
+                                            HStack {
+                                                WaitingDotsView(startTime: lyricKeys[i], endTime: endTime)
+                                                Spacer()
+                                            }
+                                            .id(lyricKeys[i])
                                         }
-                                        .id(lyricKeys[i])
                                     }
                                     .scrollTransition { content, phase in
                                         content
@@ -204,6 +203,9 @@ struct NowPlayingView: View {
                                         isUserScrolling = false
                                     }
                                 }
+                            }
+                            .onAppear {
+                                lyricScrollPosition.scrollTo(id: currentScrolledId)
                             }
                             .onReceive(globalAudioPlayer.periodicTimePublisher(forInterval: .init(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))) { _ in
                                 var newScrollId = 0.0
@@ -425,6 +427,7 @@ struct NowPlayingView: View {
                                         .fill(Color.clear)
                                         .overlay {
                                             HStack(spacing: 10) {
+                                                Spacer()
                                                 if isLoggedIn {
                                                     StarButton(isStarred: $isNowPlayingStarred) {
                                                         requestJSON("\(apiBaseURL)/like?id=\(nowPlaying.sourceTrack.id)&like=\(!isNowPlayingStarred)", headers: globalRequestHeaders) { _, _ in }

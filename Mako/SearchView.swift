@@ -15,7 +15,7 @@ struct SearchView: View {
     var isSearchKeyboardFocused: FocusState<Bool>.Binding
     @Environment(\.colorScheme) var colorScheme
     @State var searchText = ""
-    @State var searchContentType = SearchResults.ContentType.song
+    @State var searchContentType = SearchResults.ContentType.topResults
     @State var isSearching = false
     @State var searchResults: SearchResults?
     @State var recentSearchItems = [SearchResults.CodableResult]()
@@ -26,6 +26,25 @@ struct SearchView: View {
             if !searchText.isEmpty {
                 ScrollView(.horizontal) {
                     HStack {
+                        Button(action: {
+                            Task {
+                                searchContentType = .topResults
+                                if !isSearchKeyboardFocused.wrappedValue {
+                                    await performSearch(searchText)
+                                }
+                            }
+                        }, label: {
+                            Text("最佳结果")
+                        })
+                        .wrapIf(searchContentType != .topResults) { button in
+                            button
+                                .foregroundStyle(Color.primary)
+                            #if !os(watchOS)
+                                .tint(.init(uiColor: .systemBackground))
+                            #endif
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
                         Button(action: {
                             Task {
                                 searchContentType = .song

@@ -260,6 +260,7 @@ struct ContentView: View {
                                 .fill(Color.clear)
                                 .overlay {
                                     HStack(spacing: 10) {
+                                        Spacer()
                                         if isLoggedIn {
                                             StarButton(isStarred: $isNowPlayingStarred) {
                                                 requestJSON("\(apiBaseURL)/like?id=\(nowPlayingTrack.id)&like=\(!isNowPlayingStarred)", headers: globalRequestHeaders) { _, _ in }
