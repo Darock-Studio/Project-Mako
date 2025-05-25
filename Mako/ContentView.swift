@@ -28,10 +28,14 @@ struct ContentView: View {
     @State var isAccountManagementPresented = false
     @State var isNowPlayingStarred = false
     @State var isNowPlaying = false
+    @State var isNowPlayingShowingPlaylists = false
     @State var presentingCommentsID: Int64?
     #if os(iOS)
     @State var nowPlayingSheetPosition = BottomSheetPosition.hidden
     @State var _volumeView = MPVolumeView()
+    #else
+    @State var mainNavigationPath = NavigationPath([2])
+    @State var searchInitialText: String?
     #endif
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -47,6 +51,7 @@ struct ContentView: View {
                         .hidden()
                 }
             #endif
+            #if !os(watchOS)
             TabView(selection: $tabSelection.onUpdate { oldValue, newValue in
                 if oldValue == newValue && newValue == 3 {
                     isSearchKeyboardFocused = true
@@ -56,7 +61,6 @@ struct ContentView: View {
                     NavigationStack {
                         HomeView()
                             .subjectNavigatable()
-                        #if !os(watchOS)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
                                     Button(action: {
@@ -68,7 +72,6 @@ struct ContentView: View {
                                     })
                                 }
                             }
-                        #endif
                     }
                     .tag(1)
                     .tabItem {
@@ -78,7 +81,6 @@ struct ContentView: View {
                     NavigationStack {
                         LibraryView()
                             .subjectNavigatable()
-                        #if !os(watchOS)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
                                     Button(action: {
@@ -90,7 +92,6 @@ struct ContentView: View {
                                     })
                                 }
                             }
-                        #endif
                     }
                     .tag(2)
                     .tabItem {
@@ -100,7 +101,6 @@ struct ContentView: View {
                     NavigationStack {
                         SearchView(isSearchKeyboardFocused: $isSearchKeyboardFocused)
                             .subjectNavigatable()
-                        #if !os(watchOS)
                             .toolbar {
                                 ToolbarItem(placement: .topBarTrailing) {
                                     Button(action: {
@@ -112,7 +112,6 @@ struct ContentView: View {
                                     })
                                 }
                             }
-                        #endif
                     }
                     .tag(3)
                     .tabItem {
@@ -120,7 +119,6 @@ struct ContentView: View {
                         Text("搜索")
                     }
                 }
-                #if os(iOS)
                 .overlay {
                     VStack {
                         Spacer()
@@ -129,9 +127,7 @@ struct ContentView: View {
                 }
                 .ignoresSafeArea(.keyboard)
                 .ignoresSafeArea(edges: .bottom)
-                #endif
             }
-            #if os(iOS)
             .introspect(.tabView, on: .iOS(.v18...)) { tabView in
                 let tabBar = tabView.tabBar
                 let appearance = UITabBarAppearance()
@@ -139,22 +135,71 @@ struct ContentView: View {
                 tabBar.standardAppearance = appearance
                 tabBar.scrollEdgeAppearance = appearance
             }
-            #endif
             .onReceive(performSearchSubject) { text in
                 if tabSelection != 3 {
                     tabSelection = 3
                     performSearchSubject.send(text)
                 }
-                #if os(iOS)
                 nowPlayingSheetPosition = .hidden
-                #endif
             }
-            #if os(iOS)
             .onReceive(gotoArtistSubject) { _ in
                 nowPlayingSheetPosition = .hidden
             }
             .onReceive(gotoAlbumSubject) { _ in
                 nowPlayingSheetPosition = .hidden
+            }
+            #else
+            NavigationStack(path: $mainNavigationPath) {
+                List {
+                    NavigationLink(value: 1) {
+                        Label {
+                            Text("主页")
+                        } icon: {
+                            Image(_internalSystemName: "home.fill")
+                                .foregroundStyle(.accent)
+                        }
+                    }
+                    NavigationLink(value: 2) {
+                        Label {
+                            Text("资料库")
+                        } icon: {
+                            Image(_internalSystemName: "music.square.stack.fill")
+                                .foregroundStyle(.accent)
+                        }
+                    }
+                    TextFieldLink {
+                        Label {
+                            Text("搜索")
+                        } icon: {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(.accent)
+                        }
+                    } onSubmit: { searchText in
+                        searchInitialText = searchText
+                    }
+                }
+                .navigationTitle("Mako")
+                .withNowPlayingButton()
+                .navigationDestination(for: Int.self) { id in
+                    switch id {
+                    case 1:
+                        HomeView()
+                            .subjectNavigatable()
+                    case 2:
+                        LibraryView()
+                            .subjectNavigatable()
+                    default: EmptyView()
+                    }
+                }
+                .navigationDestination(item: $searchInitialText) { text in
+                    SearchView(initialText: text, isSearchKeyboardFocused: $isSearchKeyboardFocused)
+                }
+            }
+            .onReceive(performSearchSubject) { text in
+                if tabSelection != 3 {
+                    tabSelection = 3
+                    performSearchSubject.send(text)
+                }
             }
             #endif
         }
@@ -168,7 +213,7 @@ struct ContentView: View {
                     .allowsHitTesting(false)
                 HStack(spacing: 10) {
                     if let nowPlayingTrack {
-                        if isNowPlayingShowingLyrics {
+                        if isNowPlayingShowingLyrics || isNowPlayingShowingPlaylists {
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(Color.clear)
                                 .overlay {
@@ -246,7 +291,7 @@ struct ContentView: View {
             .padding(.top, UIApplication.shared.windows.filter { $0.isKeyWindow }.first!.safeAreaInsets.top)
             .environment(\.colorScheme, .dark)
         } mainContent: {
-            NowPlayingView(backgroundColors: nowPlayingBackgroundColors, coverEffectNamespace: nowPlayingCoverEffectNamespace, isShowingLyrics: $isNowPlayingShowingLyrics, isNowPlayingStarred: $isNowPlayingStarred)
+            NowPlayingView(backgroundColors: nowPlayingBackgroundColors, coverEffectNamespace: nowPlayingCoverEffectNamespace, isShowingLyrics: $isNowPlayingShowingLyrics, isShowingPlaylists: $isNowPlayingShowingPlaylists, isNowPlayingStarred: $isNowPlayingStarred)
                 .mask {
                     if isNowPlayingShowingLyrics {
                         LinearGradient(colors: [.black.opacity(0), .black, .black, .black, .black, .black, .black, .black], startPoint: .top, endPoint: .bottom)
@@ -303,21 +348,6 @@ struct ContentView: View {
                         }
                     }
                 }
-                DispatchQueue(label: "com.darock.Mako.UpdateNowPlayingInfo", qos: .utility).async {
-                    var nowPlayingInfo = [String: Any]()
-                    if let imageUrl = URL(string: media.sourceTrack.album.picUrl),
-                       let imageData = try? Data(contentsOf: imageUrl),
-                       let image = UIImage(data: imageData) {
-                        nowPlayingBackgroundColors = ColorThief.getPalette(from: image, colorCount: 16)!.map {
-                            Color(red: Double($0.r) / 255, green: Double($0.g) / 255, blue: Double($0.b) / 255)
-                        }
-                        nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-                    }
-                    nowPlayingInfo[MPMediaItemPropertyTitle] = media.sourceTrack.name
-                    nowPlayingInfo[MPMediaItemPropertyArtist] = media.sourceTrack.artists.map { $0.name }.joined(separator: "/")
-                    nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = media.sourceTrack.album.name
-                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
-                }
                 if let observer = currentPlaybackEndObserver {
                     NotificationCenter.default.removeObserver(observer)
                     currentPlaybackEndObserver = nil
@@ -327,12 +357,12 @@ struct ContentView: View {
                     object: globalAudioPlayer.currentItem,
                     queue: .main
                 ) { _ in
-                    let playbackBehavior = PlaybackBehavior.init(rawValue: UserDefaults.standard.string(forKey: "PlaybackBehavior") ?? "singleLoop") ?? .pause
+                    let playbackBehavior = PlaybackBehavior.init(rawValue: UserDefaults.standard.string(forKey: "PlaybackBehavior") ?? "singleLoop") ?? .singleLoop
                     if playbackBehavior == .singleLoop {
                         globalAudioPlayer.seek(to: .zero)
                         globalAudioPlayer.play()
                     } else if playbackBehavior == .listLoop {
-                        
+                        PlaylistManager.shared.playNext()
                     }
                 }
                 if let jsonData = jsonString(from: media) {
@@ -342,16 +372,37 @@ struct ContentView: View {
         }
         .onReceive(globalAudioPlayer.publisher(for: \.timeControlStatus)) { status in
             isNowPlaying = status == .playing
-            MPNowPlayingInfoCenter.default().playbackState = status == .playing ? .playing : .paused
+            var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
+            if isNowPlaying {
+                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = globalAudioPlayer.currentTime().seconds
+                nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
+            } else {
+                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = globalAudioPlayer.currentTime().seconds
+                nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 0.0
+            }
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
         }
         .onReceive(globalAudioPlayer.publisher(for: \.currentItem)) { item in
-            if let item {
-                var nowPlayingInfo = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [String: Any]()
-                nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = item.duration.seconds
-                nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0.0
-                nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
-                nowPlayingInfo[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+            if let item, let nowPlayingTrack {
+                DispatchQueue(label: "com.darock.Mako.UpdateNowPlayingInfo", qos: .utility).async {
+                    var nowPlayingInfo = [String: Any]()
+                    if let imageUrl = URL(string: nowPlayingTrack.album.picUrl),
+                       let imageData = try? Data(contentsOf: imageUrl),
+                       let image = UIImage(data: imageData) {
+                        nowPlayingBackgroundColors = ColorThief.getPalette(from: image, colorCount: 16)!.map {
+                            Color(red: Double($0.r) / 255, green: Double($0.g) / 255, blue: Double($0.b) / 255)
+                        }
+                        nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                    }
+                    nowPlayingInfo[MPMediaItemPropertyTitle] = nowPlayingTrack.name
+                    nowPlayingInfo[MPMediaItemPropertyArtist] = nowPlayingTrack.artists.map { $0.name }.joined(separator: "/")
+                    nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = nowPlayingTrack.album.name
+                    nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = item.duration.seconds
+                    nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = 0.0
+                    nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
+                    nowPlayingInfo[MPNowPlayingInfoPropertyDefaultPlaybackRate] = 1.0
+                    MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+                }
             }
         }
         .onReceive(presentCommentsSubject) { id in

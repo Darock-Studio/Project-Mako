@@ -79,7 +79,11 @@ struct ItemListView: View {
                             VStack(alignment: .leading) {
                                 Rectangle()
                                     .fill(Color.gray)
+                                    #if !os(watchOS)
                                     .frame(width: 150, height: 150)
+                                    #else
+                                    .frame(width: 100, height: 100)
+                                    #endif
                                     .cornerRadius(7)
                                     .redacted(reason: .placeholder)
                                 Text(verbatim: "Title")
@@ -179,7 +183,11 @@ struct ItemListView: View {
                                 .redacted(reason: .placeholder)
                         }
                         .scaledToFill()
+                        #if !os(watchOS)
                         .frame(width: 60, height: 60)
+                        #else
+                        .frame(width: 40, height: 40)
+                        #endif
                         .clipped()
                         .cornerRadius(6)
                         Text(item.name)

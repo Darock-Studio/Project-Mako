@@ -1,5 +1,5 @@
 {
-  "originHash" : "e97cc392022bdd4ee4cddc087bd752abe9c02d71cfe9ad052e3d59d990892f60",
+  "originHash" : "7ecbb047676923836254e2130d7940de94c23acedabae114d19cfd6dcc913ba7",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -34,7 +34,7 @@
       "location" : "https://github.com/Darock-Studio/DarockUI",
       "state" : {
         "branch" : "main",
-        "revision" : "a7f4dc5ce3e7bd47f83e867b35b48e64144249cc"
+        "revision" : "59bdb90db526f079f8630d712cb2930eb1a07b8c"
       }
     },
     {

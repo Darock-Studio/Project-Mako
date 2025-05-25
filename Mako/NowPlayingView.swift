@@ -18,9 +18,11 @@ struct NowPlayingView: View {
     #if !os(watchOS)
     var coverEffectNamespace: Namespace.ID
     @Binding var isShowingLyrics: Bool
+    @Binding var isShowingPlaylists: Bool
     @Binding var isNowPlayingStarred: Bool
     #else
     @State var isShowingLyrics = true
+    @State var isShowingPlaylists = false
     #endif
     @AppStorage("IsLoggedIn") var isLoggedIn = false
     @State var nowPlaying: NowPlayingInfo?
@@ -42,6 +44,7 @@ struct NowPlayingView: View {
     @State var volumeDragingNewValue = 0.0
     @State var currentVolume = AVAudioSession.sharedInstance().outputVolume
     @State var volumeObserver: NSKeyValueObservation?
+    @State var playlists = [Track]()
     var body: some View {
         VStack {
             if let nowPlaying {
@@ -236,7 +239,7 @@ struct NowPlayingView: View {
                         } else {
                             Text("文本不可用")
                         }
-                    } else {
+                    } else if !isShowingPlaylists {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.clear)
                             .overlay {
@@ -257,6 +260,117 @@ struct NowPlayingView: View {
                             .shadow(radius: 15, x: 3, y: 3)
                             .padding(.bottom, 400)
                             .allowsHitTesting(false)
+                    } else {
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    switch playbackBehavior {
+                                    case .pause:
+                                        playbackBehavior = .singleLoop
+                                    case .singleLoop:
+                                        playbackBehavior = .listLoop
+                                    case .listLoop:
+                                        playbackBehavior = .pause
+                                    }
+                                    resetMenuDismissTimer()
+                                }, label: {
+                                    switch playbackBehavior {
+                                    case .pause:
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(Color.gray.opacity(0.4))
+                                            Image(systemName: "repeat")
+                                                .font(.system(size: 16))
+                                                .foregroundStyle(.white)
+                                        }
+                                        .frame(height: 40)
+                                    case .singleLoop:
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(height: 40)
+                                            .reversedMask {
+                                                Image(systemName: "repeat.1")
+                                                    .font(.system(size: 16))
+                                            }
+                                    case .listLoop:
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(height: 40)
+                                            .reversedMask {
+                                                Image(systemName: "repeat")
+                                                    .font(.system(size: 16))
+                                            }
+                                    }
+                                })
+                            }
+                            .buttonStyle(.borderless)
+                            .padding(.horizontal, 30)
+                            List {
+                                Group {
+                                    Text("继续播放")
+                                        .font(.headline)
+                                    ForEach(playlists) { track in
+                                        HStack {
+                                            Button(action: {
+                                                Task {
+                                                    await playTrack(track)
+                                                }
+                                            }, label: {
+                                                WebImage(url: URL(string: "\(track.album.picUrl)?param=150y150")) { image in
+                                                    image.resizable()
+                                                } placeholder: {
+                                                    Rectangle()
+                                                        .fill(Color.gray)
+                                                        .redacted(reason: .placeholder)
+                                                }
+                                                .scaledToFill()
+                                                .frame(width: 50, height: 50)
+                                                .clipped()
+                                                .cornerRadius(6)
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(track.name)
+                                                        .font(.system(size: 14))
+                                                        .foregroundStyle(.white)
+                                                    Text(track.artists.map(\.name).joined(separator: " / "))
+                                                        .font(.system(size: 12))
+                                                        .foregroundStyle(.white)
+                                                        .opacity(0.6)
+                                                }
+                                                .lineLimit(1)
+                                            })
+                                            .buttonStyle(.plain)
+                                            .contextMenu {
+                                                track.contextActions
+                                            } preview: {
+                                                track.previewView
+                                            }
+                                            Spacer()
+                                            Image(systemName: "line.3.horizontal")
+                                                .font(.system(size: 22))
+                                                .opacity(0.6)
+                                        }
+                                    }
+                                    .onMove { source, destination in
+                                        PlaylistManager.shared.move(fromOffsets: source, toOffset: destination)
+                                    }
+                                    .onDelete { indexs in
+                                        PlaylistManager.shared.remove(atOffsets: indexs)
+                                    }
+                                    Spacer()
+                                }
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(.init(top: 5, leading: 30, bottom: 5, trailing: 30))
+                                #if !os(watchOS)
+                                .listRowSeparator(.hidden)
+                                #endif
+                            }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
+                            .mask {
+                                LinearGradient(colors: [.black, .black, .black, .black, .black, .black, .black, .black, .black, .black, .black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                            }
+                        }
+                        .padding(.bottom, 300)
                     }
                     // Audio Controls
                     MeshGradient(width: 3,
@@ -291,7 +405,7 @@ struct NowPlayingView: View {
                         Spacer()
                         VStack {
                             #if !os(watchOS)
-                            if !isShowingLyrics {
+                            if !isShowingLyrics && !isShowingPlaylists {
                                 HStack {
                                     Rectangle()
                                         .fill(Color.clear)
@@ -356,6 +470,12 @@ struct NowPlayingView: View {
                                                 let newTime = currentPlaybackTime + value.translation.width
                                                 if newTime >= 0 && newTime <= currentItemTotalTime {
                                                     progressDragingNewTime = newTime
+                                                } else {
+                                                    if newTime < 0 {
+                                                        progressDragingNewTime = 0
+                                                    } else if newTime > currentItemTotalTime {
+                                                        progressDragingNewTime = currentItemTotalTime
+                                                    }
                                                 }
                                             }
                                             .onEnded { _ in
@@ -536,6 +656,7 @@ struct NowPlayingView: View {
                             }
                             .opacity(0.6)
                             .scaleEffect(isVolumeDraging ? 1.05 : 1)
+                            .contentShape(Rectangle())
                             .padding(.horizontal, 40)
                             .animation(.easeOut(duration: 0.2), value: isVolumeDraging)
                             #endif
@@ -545,6 +666,7 @@ struct NowPlayingView: View {
                                 Button(action: {
                                     withAnimation(.easeOut) {
                                         isShowingLyrics.toggle()
+                                        isShowingPlaylists = false
                                     }
                                     isShowingControls = true
                                     resetMenuDismissTimer()
@@ -575,38 +697,26 @@ struct NowPlayingView: View {
                                 .frame(width: 50, height: 50)
                                 Spacer()
                                 Button(action: {
-                                    switch playbackBehavior {
-                                    case .pause:
-                                        playbackBehavior = .singleLoop
-                                    case .singleLoop:
-                                        playbackBehavior = .listLoop
-                                    case .listLoop:
-                                        playbackBehavior = .pause
+                                    withAnimation(.easeOut) {
+                                        isShowingPlaylists.toggle()
+                                        isShowingLyrics = false
                                     }
+                                    isShowingControls = true
                                     resetMenuDismissTimer()
                                 }, label: {
-                                    switch playbackBehavior {
-                                    case .pause:
-                                        Image(systemName: "repeat")
+                                    if isShowingPlaylists {
+                                        RoundedRectangle(cornerRadius: 7)
+                                            .fill(Color.white.opacity(0.6))
+                                            .frame(width: 30, height: 30)
+                                            .reversedMask {
+                                                Image(systemName: "list.bullet")
+                                                    .font(.system(size: 20))
+                                            }
+                                    } else {
+                                        Image(systemName: "list.bullet")
                                             .font(.system(size: 20))
                                             .foregroundStyle(.white)
                                             .opacity(0.6)
-                                    case .singleLoop:
-                                        RoundedRectangle(cornerRadius: 7)
-                                            .fill(Color.white.opacity(0.6))
-                                            .frame(width: 30, height: 30)
-                                            .reversedMask {
-                                                Image(systemName: "repeat.1")
-                                                    .font(.system(size: 20))
-                                            }
-                                    case .listLoop:
-                                        RoundedRectangle(cornerRadius: 7)
-                                            .fill(Color.white.opacity(0.6))
-                                            .frame(width: 30, height: 30)
-                                            .reversedMask {
-                                                Image(systemName: "repeat")
-                                                    .font(.system(size: 20))
-                                            }
                                     }
                                 })
                                 .buttonStyle(.borderless)
@@ -660,6 +770,8 @@ struct NowPlayingView: View {
             nowPlaying = nowPlayingMedia.value
             isPlaying = globalAudioPlayer.timeControlStatus == .playing
             currentItemTotalTime = globalAudioPlayer.currentItem?.duration.seconds ?? 0.0
+            playbackBehavior = PlaybackBehavior.init(rawValue: UserDefaults.standard.string(forKey: "PlaybackBehavior") ?? "singleLoop") ?? .singleLoop
+            playlists = PlaylistManager.shared.tracks
             isShowingControls = true
             resetMenuDismissTimer()
             #if os(iOS)
@@ -700,6 +812,9 @@ struct NowPlayingView: View {
             if time.seconds - currentPlaybackTime >= 0.5 || time.seconds < currentPlaybackTime {
                 currentPlaybackTime = time.seconds
             }
+        }
+        .onReceive(PlaylistManager.shared.publisherForTracks) { tracks in
+            playlists = tracks
         }
     }
     
@@ -766,56 +881,39 @@ struct NowPlayingView: View {
                 }
                 if currentTime >= startTime && currentTime <= endTime
                     && dot1Opacity == 0.2 && dot2Opacity == 0.2 && dot3Opacity == 0.2 {
-                    if #available(watchOS 10, *) {
-                        let pieceTime = (endTime - startTime - 1.0) / 3.0
+                    let pieceTime = (endTime - startTime - 1.0) / 3.0
+                    withAnimation(.linear(duration: pieceTime)) {
+                        dot1Opacity = 1.0
+                    } completion: {
                         withAnimation(.linear(duration: pieceTime)) {
-                            dot1Opacity = 1.0
+                            dot2Opacity = 1.0
                         } completion: {
                             withAnimation(.linear(duration: pieceTime)) {
-                                dot2Opacity = 1.0
+                                dot3Opacity = 1.0
                             } completion: {
-                                withAnimation(.linear(duration: pieceTime)) {
-                                    dot3Opacity = 1.0
+                                withAnimation(.easeInOut(duration: 0.6)) {
+                                    scale = 1.3
                                 } completion: {
-                                    withAnimation(.easeInOut(duration: 0.6)) {
-                                        scale = 1.3
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        scale = 0.02
+                                        dot1Opacity = 0.02
+                                        dot2Opacity = 0.02
+                                        dot3Opacity = 0.02
                                     } completion: {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            scale = 0.02
-                                            dot1Opacity = 0.02
-                                            dot2Opacity = 0.02
-                                            dot3Opacity = 0.02
-                                        } completion: {
-                                            isVisible = false
-                                            Task {
-                                                try? await Task.sleep(for: .seconds(0.5))
-                                                dot1Opacity = 0.2
-                                                dot2Opacity = 0.2
-                                                dot3Opacity = 0.2
-                                                scale = 1
-                                                withAnimation(.easeInOut(duration: 2.0).repeatForever()) {
-                                                    scale = 1.2
-                                                }
+                                        isVisible = false
+                                        Task {
+                                            try? await Task.sleep(for: .seconds(0.5))
+                                            dot1Opacity = 0.2
+                                            dot2Opacity = 0.2
+                                            dot3Opacity = 0.2
+                                            scale = 1
+                                            withAnimation(.easeInOut(duration: 2.0).repeatForever()) {
+                                                scale = 1.2
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                    } else {
-                        withAnimation(.linear(duration: endTime - startTime)) {
-                            dot1Opacity = 1.0
-                            dot2Opacity = 1.0
-                            dot3Opacity = 1.0
-                        }
-                        Task {
-                            try? await Task.sleep(for: .seconds(endTime - startTime))
-                            isVisible = false
-                            try? await Task.sleep(for: .seconds(0.5))
-                            dot1Opacity = 0.2
-                            dot2Opacity = 0.2
-                            dot3Opacity = 0.2
-                            scale = 1
                         }
                     }
                 }
@@ -834,47 +932,6 @@ struct NowPlayingView: View {
             .onReceive(globalAudioPlayer.periodicTimePublisher()) { time in
                 if time.seconds - currentTime >= 0.1 || time.seconds < currentTime {
                     currentTime = time.seconds
-                }
-            }
-        }
-    }
-    struct WaitingProgressView: View {
-        var startTime: Double
-        var endTime: Double
-        @Binding var currentTime: Double
-        @State var isVisible = false
-        @State var verticalPadding: CGFloat = -15
-        var body: some View {
-            VStack {
-                CustomProgressView(value: (currentTime - startTime) / (endTime - startTime))
-                    .frame(height: 15)
-                HStack {
-                    Text(formattedTime(from: currentTime - startTime))
-                        .font(.system(size: 11))
-                        .opacity(0.6)
-                    Spacer()
-                    Text(formattedTime(from: endTime - startTime))
-                        .font(.system(size: 11))
-                        .opacity(0.6)
-                }
-            }
-            .padding(.vertical, verticalPadding)
-            .opacity(isVisible ? 1 : 0)
-            .blur(radius: isVisible ? 0 : 5)
-            .scaleEffect(isVisible ? 1 : 0.6)
-            .animation(.spring(response: 0.6, dampingFraction: 0.7, blendDuration: 0.3), value: isVisible)
-            .onChange(of: currentTime) {
-                isVisible = currentTime >= startTime + 0.2 && currentTime <= endTime
-            }
-            .onChange(of: isVisible) {
-                if isVisible {
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        verticalPadding = 0
-                    }
-                } else {
-                    withAnimation(.easeOut) {
-                        verticalPadding = -15
-                    }
                 }
             }
         }

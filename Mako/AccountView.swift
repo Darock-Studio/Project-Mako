@@ -59,6 +59,7 @@ struct AccountView: View {
         @State var usernameInput = ""
         @State var passwordInput = ""
         @State var isLoggingIn = false
+        @State var loginFailureReason = ""
         var body: some View {
             Form {
                 Section {
@@ -86,7 +87,7 @@ struct AccountView: View {
                                 userID = String(respJson["account"]["id"].int64Value)
                                 dismiss()
                             } else {
-                                
+                                loginFailureReason = String(localized: "尝试登录时出错，请稍后再试。")
                             }
                             isLoggingIn = false
                         }
@@ -99,6 +100,11 @@ struct AccountView: View {
                         }
                     })
                     .disabled(usernameInput.isEmpty || passwordInput.isEmpty || isLoggingIn)
+                } footer: {
+                    if !loginFailureReason.isEmpty {
+                        Text(loginFailureReason)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
             .navigationTitle("登录")

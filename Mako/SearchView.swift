@@ -11,13 +11,16 @@ import DarockFoundation
 import SDWebImageSwiftUI
 
 struct SearchView: View {
+    var initialText: String?
     var isSearchKeyboardFocused: FocusState<Bool>.Binding
     @Environment(\.colorScheme) var colorScheme
     @State var searchText = ""
     @State var searchContentType = SearchResults.ContentType.song
     @State var isSearching = false
     @State var searchResults: SearchResults?
-    @State var recentSearches = [String]()
+    @State var recentSearchItems = [SearchResults.CodableResult]()
+    @State var recentSearchTexts = [String]()
+    @State var showingTextForRecentSearch = false
     var body: some View {
         List {
             if !searchText.isEmpty {
@@ -90,33 +93,50 @@ struct SearchView: View {
             if let results = searchResults {
                 results.itemsView
             }
-            if searchResults == nil && !recentSearches.isEmpty && !isSearching {
+            if searchResults == nil && !recentSearchTexts.isEmpty && !isSearching {
+                #if !os(watchOS)
+                Picker("", selection: $showingTextForRecentSearch) {
+                    Text("项目").tag(false)
+                    Text("关键词").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .listRowSeparator(.hidden, edges: .top)
+                #endif
                 HStack {
                     Text("最近搜索")
                         .font(.system(size: 17, weight: .semibold))
                     Spacer()
                     Button("清空", role: .destructive) {
-                        recentSearches.removeAll()
+                        recentSearchTexts.removeAll()
                         updateSearchHistory()
                     }
                     .buttonStyle(.borderless)
                 }
+                .onAppear {
+                    if let jsonString = try? String(contentsOfFile: NSHomeDirectory() + "/Documents/RecentResultSearches.json", encoding: .utf8) {
+                        recentSearchItems = getJsonData([SearchResults.CodableResult].self, from: jsonString) ?? []
+                    }
+                }
                 #if !os(watchOS)
                 .listRowSeparator(.hidden, edges: .top)
                 #endif
-                ForEach(recentSearches, id: \.self) { search in
-                    Button(action: {
-                        Task {
-                            searchText = search
-                            await performSearch(search)
-                        }
-                    }, label: {
-                        Text(search)
-                    })
-                }
-                .onDelete { indexs in
-                    recentSearches.remove(atOffsets: indexs)
-                    updateSearchHistory()
+                if !showingTextForRecentSearch {
+                    SearchResults(fromCodableResults: recentSearchItems).itemsView
+                } else {
+                    ForEach(recentSearchTexts, id: \.self) { search in
+                        Button(action: {
+                            Task {
+                                searchText = search
+                                await performSearch(search)
+                            }
+                        }, label: {
+                            Text(search)
+                        })
+                    }
+                    .onDelete { indexs in
+                        recentSearchTexts.remove(atOffsets: indexs)
+                        updateSearchHistory()
+                    }
                 }
             } else if isSearching {
                 ProgressView()
@@ -148,9 +168,17 @@ struct SearchView: View {
         }
         .navigationTitle("搜索")
         .withNowPlayingButton()
+        .onInitialAppear {
+            if let initialText {
+                searchText = initialText
+                Task {
+                    await performSearch(initialText)
+                }
+            }
+        }
         .onAppear {
             if let jsonString = try? String(contentsOfFile: NSHomeDirectory() + "/Documents/RecentSearches.json", encoding: .utf8) {
-                recentSearches = getJsonData([String].self, from: jsonString) ?? []
+                recentSearchTexts = getJsonData([String].self, from: jsonString) ?? []
             }
         }
         .onChange(of: searchText) {
@@ -174,14 +202,14 @@ struct SearchView: View {
         isSearching = false
     }
     func recentSearchInsert(_ text: String) {
-        if !recentSearches.contains(text) {
-            recentSearches.insert(text, at: 0)
+        if !recentSearchTexts.contains(text) {
+            recentSearchTexts.insert(text, at: 0)
         } else {
-            recentSearches.move(fromOffsets: [recentSearches.firstIndex(of: text)!], toOffset: 0)
+            recentSearchTexts.move(fromOffsets: [recentSearchTexts.firstIndex(of: text)!], toOffset: 0)
         }
     }
     func updateSearchHistory() {
-        if let jsonString = jsonString(from: recentSearches) {
+        if let jsonString = jsonString(from: recentSearchTexts) {
             try? jsonString.write(toFile: NSHomeDirectory() + "/Documents/RecentSearches.json", atomically: true, encoding: .utf8)
         }
     }

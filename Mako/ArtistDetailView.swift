@@ -51,9 +51,19 @@ struct ArtistDetailView: View {
                                 .font(.system(size: 35, weight: .bold))
                                 .foregroundStyle(.white)
                             Spacer()
+                            if !topSongs.isEmpty {
+                                Button(action: {
+                                    PlaylistManager.shared.replace(with: topSongs)
+                                }, label: {
+                                    Image(systemName: "play.fill")
+                                        .padding(2)
+                                })
+                                .buttonStyle(.borderedProminent)
+                                .buttonBorderShape(.circle)
+                            }
                         }
                         ._tightPadding()
-                        .padding(.horizontal)
+                        .padding(.horizontal, 5)
                     }
                     VStack(alignment: .leading) {
                         if !topSongs.isEmpty {
@@ -98,12 +108,12 @@ struct ArtistDetailView: View {
                                         })
                                         #if os(iOS)
                                         .frame(width: screenBounds.width - 60)
+                                        #endif
                                         .contextMenu {
                                             track.contextActions
                                         } preview: {
                                             track.previewView
                                         }
-                                        #endif
                                     }
                                 }
                                 .scrollTargetLayout()
@@ -174,6 +184,10 @@ struct ArtistDetailView: View {
                         }
                         .centerAligned()
                         .padding(.horizontal, -10)
+                        #if os(iOS)
+                        Spacer()
+                            .frame(height: 60)
+                        #endif
                     }
                     .padding()
                 }
@@ -217,7 +231,6 @@ struct ArtistDetailView: View {
                         }
                     }
                 }
-                .padding(.bottom, 60)
                 #endif
                 .edgesIgnoringSafeArea(.top)
                 .onAppear {
@@ -226,7 +239,7 @@ struct ArtistDetailView: View {
                             topSongs = getJsonData([Track].self, from: respJson["songs"].rawString()!) ?? []
                         }
                     }
-                    requestJSON("\(apiBaseURL)/artist/album?id=\(id)", headers: globalRequestHeaders) { respJson, isSuccess in
+                    requestJSON("\(apiBaseURL)/artist/album?id=\(id)&limit=1000", headers: globalRequestHeaders) { respJson, isSuccess in
                         if isSuccess {
                             albums = getJsonData([Album].self, from: respJson["hotAlbums"].rawString()!) ?? []
                         }

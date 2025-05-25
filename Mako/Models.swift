@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import DarockUI
 import NotifKit
 import SwiftyJSON
 import DarockFoundation
@@ -28,7 +29,11 @@ enum SuggestionItemType {
     case album
 }
 
-struct Album: Identifiable, Decodable {
+struct Album: Identifiable, Codable, Hashable, Equatable {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
+    
     var id: Int64
     var name: String
     var coverImgUrl: String
@@ -72,9 +77,28 @@ struct Album: Identifiable, Decodable {
             self.trackCount = try container.decode(Int.self, forKey: .size)
         }
     }
+    
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(description, forKey: .description)
+        try container.encode(artists, forKey: .artists)
+        try container.encode(coverImgUrl, forKey: .coverImgUrl)
+        try container.encode(createTime.timeIntervalSince1970 * 1000, forKey: .createTime)
+        if let timeInterval = updateTime?.timeIntervalSince1970 {
+            try container.encode(timeInterval * 1000, forKey: .updateTime)
+        }
+        try container.encode(trackCount, forKey: .trackCount)
+        try container.encode(tags, forKey: .tags)
+    }
 }
 
-struct Track: Identifiable, Codable {
+struct Track: Identifiable, Codable, Hashable, Equatable {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
+    
     var id: Int64
     var name: String
     var artists: [Artist]
@@ -171,6 +195,20 @@ struct Track: Identifiable, Codable {
                     }
                 }
             }
+            if nowPlayingMedia.value?.sourceTrack != track {
+                Section {
+                    Button("插播", systemImage: "text.line.first.and.arrowtriangle.forward") {
+                        PlaylistManager.shared.insertFirst(track)
+                        NKTipper.automaticStyle.present(text: "插播", symbol: "text.line.first.and.arrowtriangle.forward")
+                    }
+                    if !PlaylistManager.shared.isEmpty {
+                        Button("最后播放", systemImage: "text.line.last.and.arrowtriangle.forward") {
+                            PlaylistManager.shared.append(track)
+                            NKTipper.automaticStyle.present(text: "最后播放", symbol: "text.line.last.and.arrowtriangle.forward")
+                        }
+                    }
+                }
+            }
             Section {
                 Button("查看评论", systemImage: "text.bubble") {
                     presentCommentsSubject.send(track.id)
@@ -182,7 +220,6 @@ struct Track: Identifiable, Codable {
                         gotoArtistSubject.send(track.artists.first!.id)
                     }
                 } else {
-                    #if !os(watchOS)
                     Menu("转到艺人", systemImage: "music.microphone") {
                         ForEach(track.artists) { artist in
                             Button(artist.name, systemImage: "person") {
@@ -190,20 +227,10 @@ struct Track: Identifiable, Codable {
                             }
                         }
                     }
-                    #else
-                    ForEach(track.artists) { artist in
-                        Button(artist.name, systemImage: "person") {
-                            gotoArtistSubject.send(artist.id)
-                        }
-                    }
-                    #endif
                 }
-                Button(action: {
+                Button("转到专辑", internalSystemImage: "music.square") {
                     gotoAlbumSubject.send(Int64(track.album.id))
-                }, label: {
-                    Image(_internalSystemName: "music.square")
-                    Text("转到专辑")
-                })
+                }
             }
             Section {
                 Link(destination: URL(string: "https://music.163.com/#/song?id=\(track.id)")!) {
@@ -214,14 +241,18 @@ struct Track: Identifiable, Codable {
         }
     }
     
-    struct Album: Identifiable, Codable {
+    struct Album: Identifiable, Codable, Hashable {
         var id: Int
         var name: String
         var picUrl: String
     }
 }
 
-struct Artist: Identifiable, Codable {
+struct Artist: Identifiable, Codable, Hashable, Equatable {
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
+    
     var id: Int
     var name: String
     var picUrl: String?
@@ -235,28 +266,27 @@ struct ArtistDetailed: Identifiable, Decodable {
 }
 
 struct SearchResults {
-    var contentType: ContentType
-    
-    private var anyResults: [Any] = []
+    private var anyResults: [CodableResult] = []
     
     init(type: ContentType, keyword: String) async {
-        self.contentType = type
-        
         let result = await requestJSON("\(apiBaseURL)/cloudsearch?keywords=\(keyword)&type=\(type.rawValue)", headers: globalRequestHeaders)
         if case let .success(respJson) = result {
             switch type {
             case .song:
-                anyResults = getJsonData([Track].self, from: respJson["result"]["songs"].rawString()!) ?? []
+                anyResults = (getJsonData([Track].self, from: respJson["result"]["songs"].rawString()!) ?? []).map { .track($0) }
             case .album:
-                anyResults = getJsonData([Album].self, from: respJson["result"]["albums"].rawString()!) ?? []
+                anyResults = (getJsonData([Album].self, from: respJson["result"]["albums"].rawString()!) ?? []).map { .album($0) }
             case .artist:
-                anyResults = getJsonData([Artist].self, from: respJson["result"]["artists"].rawString()!) ?? []
+                anyResults = (getJsonData([Artist].self, from: respJson["result"]["artists"].rawString()!) ?? []).map { .artist($0) }
             case .playlist:
-                anyResults = getJsonData([Album].self, from: respJson["result"]["playlists"].rawString()!) ?? []
+                anyResults = (getJsonData([Album].self, from: respJson["result"]["playlists"].rawString()!) ?? []).map { .album($0) }
             case .lyrics:
                 break // TODO: Add lyric searching feature
             }
         }
+    }
+    init(fromCodableResults results: [CodableResult]) {
+        self.anyResults = results
     }
     
     var isEmpty: Bool {
@@ -264,13 +294,14 @@ struct SearchResults {
     }
     
     @ViewBuilder var itemsView: some View {
-        switch contentType {
-        case .song:
-            ForEach(anyResults as! [Track]) { track in
+        ForEach(anyResults) { result in
+            switch result {
+            case .track(let track):
                 Button(action: {
                     Task {
                         await playTrack(track)
                     }
+                    insertSearchHistory(for: .track(track))
                 }, label: {
                     HStack {
                         WebImage(url: URL(string: "\(track.album.picUrl)?param=240y240")) { image in
@@ -281,7 +312,11 @@ struct SearchResults {
                                 .redacted(reason: .placeholder)
                         }
                         .scaledToFill()
+                        #if !os(watchOS)
                         .frame(width: 60, height: 60)
+                        #else
+                        .frame(width: 35, height: 35)
+                        #endif
                         .clipped()
                         .cornerRadius(5)
                         VStack(alignment: .leading, spacing: 2) {
@@ -300,11 +335,21 @@ struct SearchResults {
                         #endif
                     }
                 })
+                .contextMenu {
+                    track.contextActions
+                } preview: {
+                    track.previewView
+                }
+                #if !os(watchOS)
                 .listRowInsets(.init(top: 10, leading: 20, bottom: 10, trailing: 0))
-            }
-        case .album:
-            ForEach(anyResults as! [Album]) { album in
-                NavigationLink(destination: { AlbumDetailView(id: album.id, type: .album) }, label: {
+                #endif
+            case .album(let album):
+                NavigationLink(destination: {
+                    AlbumDetailView(id: album.id, type: .album)
+                        .onInitialAppear {
+                            insertSearchHistory(for: .album(album))
+                        }
+                }, label: {
                     HStack {
                         WebImage(url: URL(string: "\(album.coverImgUrl)?param=240y240")) { image in
                             image.resizable()
@@ -314,7 +359,11 @@ struct SearchResults {
                                 .redacted(reason: .placeholder)
                         }
                         .scaledToFill()
+                        #if !os(watchOS)
                         .frame(width: 60, height: 60)
+                        #else
+                        .frame(width: 35, height: 35)
+                        #endif
                         .clipped()
                         .cornerRadius(5)
                         VStack(alignment: .leading, spacing: 2) {
@@ -326,11 +375,16 @@ struct SearchResults {
                         }
                     }
                 })
+                #if !os(watchOS)
                 .listRowInsets(.init(top: 10, leading: 20, bottom: 10, trailing: 20))
-            }
-        case .artist:
-            ForEach(anyResults as! [Artist]) { artist in
-                NavigationLink(destination: { ArtistDetailView(id: artist.id) }, label: {
+                #endif
+            case .artist(let artist):
+                NavigationLink(destination: {
+                    ArtistDetailView(id: artist.id)
+                        .onInitialAppear {
+                            insertSearchHistory(for: .artist(artist))
+                        }
+                }, label: {
                     HStack {
                         WebImage(url: URL(string: "\(artist.picUrl ?? "")?param=240y240")) { image in
                             image.resizable()
@@ -341,7 +395,11 @@ struct SearchResults {
                                 .foregroundStyle(.white, .gray)
                         }
                         .scaledToFill()
+                        #if !os(watchOS)
                         .frame(width: 60, height: 60)
+                        #else
+                        .frame(width: 35, height: 35)
+                        #endif
                         .clipShape(Circle())
                         VStack(alignment: .leading, spacing: 2) {
                             Text(artist.name)
@@ -352,33 +410,25 @@ struct SearchResults {
                         }
                     }
                 })
+                #if !os(watchOS)
                 .listRowInsets(.init(top: 10, leading: 20, bottom: 10, trailing: 20))
+                #endif
             }
-        case .playlist:
-            ForEach(anyResults as! [Album]) { artist in
-                HStack {
-                    WebImage(url: URL(string: artist.coverImgUrl)) { image in
-                        image.resizable()
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray)
-                            .redacted(reason: .placeholder)
-                    }
-                    .scaledToFill()
-                    .frame(width: 40, height: 40)
-                    .clipped()
-                    .cornerRadius(3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(artist.name)
-                            .font(.system(size: 14))
-                        Text("播放列表")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.gray)
-                    }
-                }
-            }
-        case .lyrics:
-            EmptyView()
+        }
+    }
+    
+    private func insertSearchHistory(for result: CodableResult) {
+        var recentSearches = [CodableResult]()
+        if let jsonString = try? String(contentsOfFile: NSHomeDirectory() + "/Documents/RecentResultSearches.json", encoding: .utf8) {
+            recentSearches = getJsonData([CodableResult].self, from: jsonString) ?? []
+        }
+        if !recentSearches.contains(result) {
+            recentSearches.insert(result, at: 0)
+        } else {
+            recentSearches.move(fromOffsets: [recentSearches.firstIndex(of: result)!], toOffset: 0)
+        }
+        if let jsonString = jsonString(from: recentSearches) {
+            try? jsonString.write(toFile: NSHomeDirectory() + "/Documents/RecentResultSearches.json", atomically: true, encoding: .utf8)
         }
     }
     
@@ -388,6 +438,20 @@ struct SearchResults {
         case artist = 100
         case playlist = 1000
         case lyrics = 1006
+    }
+    
+    enum CodableResult: Identifiable, Codable, Hashable, Equatable {
+        case track(Track)
+        case album(Album)
+        case artist(Artist)
+        
+        var id: Int64 {
+            switch self {
+            case .track(let track):   track.id
+            case .album(let album):   album.id
+            case .artist(let artist): Int64(artist.id)
+            }
+        }
     }
 }
 

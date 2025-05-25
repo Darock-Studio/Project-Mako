@@ -16,6 +16,85 @@ var globalAudioPlayer = AVPlayer()
 var nowPlayingMedia = CurrentValueSubject<NowPlayingInfo?, Never>(nil)
 var currentPlaybackEndObserver: Any?
 
+class PlaylistManager {
+    static let shared = PlaylistManager()
+    
+    let publisherForTracks = PassthroughSubject<[Track], Never>()
+    private(set) var tracks: [Track] {
+        get {
+            playlist
+        }
+        set {
+            playlist = newValue
+            publisherForTracks.send(newValue)
+            if let jsonString = jsonString(from: newValue) {
+                try? jsonString.write(toFile: NSHomeDirectory() + "/Documents/Playlist.json", atomically: true, encoding: .utf8)
+            }
+        }
+    }
+    var isEmpty: Bool { tracks.isEmpty }
+    
+    private var playlist = [Track]()
+    
+    private init() {
+        if let jsonString = try? String(contentsOfFile: NSHomeDirectory() + "/Documents/Playlist.json", encoding: .utf8) {
+            playlist = getJsonData([Track].self, from: jsonString) ?? []
+        }
+    }
+    
+    func replace(with tracks: [Track], playFirst: Bool = true) {
+        self.tracks = tracks
+        if playFirst {
+            playNext()
+            UserDefaults.standard.set(PlaybackBehavior.listLoop.rawValue, forKey: "PlaybackBehavior")
+        }
+    }
+    func append(_ track: Track) {
+        tracks.append(track)
+    }
+    func insertFirst(_ track: Track) {
+        tracks.insert(track, at: 0)
+    }
+    func move(fromOffsets from: IndexSet, toOffset to: Int) {
+        tracks.move(fromOffsets: from, toOffset: to)
+    }
+    func remove(at index: Int) {
+        tracks.remove(at: index)
+    }
+    func remove(atOffsets offsets: IndexSet) {
+        tracks.remove(atOffsets: offsets)
+    }
+    func removeAll() {
+        tracks.removeAll()
+    }
+    
+    @discardableResult
+    func playNext() async -> Track? {
+        if !tracks.isEmpty {
+            let playing = tracks.removeFirst()
+            tracks.append(playing)
+            await playTrack(playing)
+            return playing
+        } else {
+            return nil
+        }
+    }
+    func playNext(completion: ((Track?) -> Void)? = nil) {
+        if !tracks.isEmpty {
+            let playing = tracks.removeFirst()
+            tracks.append(playing)
+            Task {
+                await playTrack(playing)
+                completion?(playing)
+            }
+        } else {
+            completion?(nil)
+        }
+    }
+    
+    
+}
+
 func playTrack(_ track: Track) async {
     var lyrics = [Double: String]()
     let result = await requestJSON("\(apiBaseURL)/lyric?id=\(track.id)", headers: globalRequestHeaders)

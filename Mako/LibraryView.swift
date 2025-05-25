@@ -72,6 +72,7 @@ struct LibraryView: View {
             .navigationTitle("播放列表")
             .navigationBarTitleDisplayMode(.large)
             .subjectNavigatable()
+            .withNowPlayingButton()
             .onAppear {
                 requestJSON("\(apiBaseURL)/user/playlist?uid=\(uid)&limit=10000", headers: globalRequestHeaders) { respJson, isSuccess in
                     if isSuccess {
